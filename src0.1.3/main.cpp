@@ -1762,8 +1762,8 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
 {
     static map<unsigned int, vector<unsigned char> > mapReuseKey;
     printf("received: %-12s (%d bytes)  ", strCommand.c_str(), vRecv.size());
-    for (int i = 0; i < min(vRecv.size() , std::size_t(250)); i++)
-        printf("%02x ", vRecv[i] & 0xff);
+    //for (int i = 0; i < min(vRecv.size() , std::size_t(250)); i++)
+    //    printf("%02x ", vRecv[i] & 0xff);
     printf("\n");
     if (nDropMessagesTest > 0 && GetRand(nDropMessagesTest) == 0)
     {

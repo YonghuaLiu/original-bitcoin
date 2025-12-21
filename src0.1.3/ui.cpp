@@ -720,7 +720,7 @@ void CMainFrame::OnIdle(wxIdleEvent& event)
         }
 
         printf("RefreshListCtrl done\n");
-        printf("Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
+        //printf("Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
     }
     else
     {
@@ -1262,12 +1262,12 @@ CAboutDialog::CAboutDialog(wxWindow* parent) : CAboutDialogBase(parent)
     if (str.Find(static_cast<wxChar>('Â')) != wxNOT_FOUND)
         str.Remove(str.Find(static_cast<wxChar>('Â'), 1));
     m_staticTextMain->SetLabel(str);
-	printf("Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n"
-		,GetCurrentProcessMemoryMB()
-		,GetFileNameWithoutPath(__FILE__)
-		,__LINE__
-		,__FUNCTION__
-	);
+	//printf("Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n"
+	//	,GetCurrentProcessMemoryMB()
+	//	,GetFileNameWithoutPath(__FILE__)
+	//	,__LINE__
+	//	,__FUNCTION__
+	//);
 }
 
 void CAboutDialog::OnButtonOK(wxCommandEvent& event)
@@ -3108,7 +3108,7 @@ bool CMyApp::OnInit2()
         }
     }
     printf("OnInit done. Code at %s:%d \n",__FILE__, __LINE__);
-    printf("Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
+    //printf("Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
     return true;
 }
 
