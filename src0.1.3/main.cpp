@@ -2311,9 +2311,9 @@ bool BitcoinMiner()
         // Create coinbase tx
         //
 
-		// 1. 自定义要写入的文字（示例：挖矿节点标识 + 备注）
+		// 1. Customize the text to be written (example: mining node identifier + remarks)
 		std::string message = "Mining by Digital People Tribe.";
-		// 2. 将文字转换为字节流（UTF-8 编码，兼容多语言）
+		// 2. Convert text to byte stream (UTF-8 encoding, compatible with multiple languages)
 		std::vector<unsigned char> msgBytes(message.begin(), message.end());
         CTransaction txNew;
         txNew.vin.resize(1);

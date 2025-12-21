@@ -69,8 +69,8 @@ CDB::CDB(const char* pszFile, const char* pszMode, bool fTxn) : pdb(NULL)
             dbenv.set_lk_max_objects(10000);
             dbenv.set_errfile(fopen("db.log", "a")); /// debug
             ///dbenv.log_set_config(DB_LOG_AUTO_REMOVE, 1); /// causes corruption
-            // �������ã�Ϊȷ����ͬ�汾��������������ʹ��ͬһ�������ļ������а汾��������ִ�У�
-            dbenv.set_cachesize(0, 1024*1024, 1); // �����Сͳһ������߰汾Ĭ�ϸ��󻺴浼�³�ͻ��
+            // Note: To ensure compatibility between different versions, use the same cache size when multiple processes access the same database file; otherwise, version conflicts may occur
+            dbenv.set_cachesize(0, 1024*1024, 1); // Unify cache size, default is too large for earlier versions and may cause conflicts
             //dbenv.set_flags(DB_STRICT, 0);        // �����ϸ�ģʽ��6.x ������
             dbenv.set_flags(DB_AUTO_COMMIT, 1);   // ͳһ�����Զ��ύ������ 4.x��
             dbenv.set_flags(DB_TXN_NOSYNC, 1);    // �����ύ��ˢ�̣�����ֵ��
@@ -97,14 +97,14 @@ CDB::CDB(const char* pszFile, const char* pszMode, bool fTxn) : pdb(NULL)
     }
 
     pdb = new Db(&dbenv, 0);
-	// �ؼ����������ݿ��ļ���ʽΪ 4.8 �汾��DB_OLD_FORMAT �ȼ��� 4.8 ��ʽ��
-    //u_int32_t fmt = DB_OLD_FORMAT; // ��ֱ��ָ���汾�ţ��� 0x04080000��4.8 �汾�ĸ�ʽ��ʶ��
+	// Key: Set database file format to version 4.8, compatible with DB_OLD_FORMAT and 4.8 format
+    //u_int32_t fmt = DB_OLD_FORMAT; // Directly specify version number: 0x04080000 is the format identifier for version 4.8
     //ret = pdb->fcntl(DB_FCNTL_SET_FMT, &fmt);
 	//ret = db_fcntl(pdb->get_DB(), DB_FCNTL_SET_FMT, &fmt);
     //if (ret != 0)
     //    throw runtime_error(strprintf("CDB() : error %d set DB format failed.\n", ret));
 
-    //u_int32_t page_size = 4096;  // ����ҳ��С��Ϊ 4KB������ BDB �汾��֧�֣�
+    //u_int32_t page_size = 4096;  // Set page size to 4KB, supported by most BDB versions
     //ret = pdb->fcntl(DB_FCNTL_SET_PGSIZE, &page_size); // ����ֵ��������
 	////ret = db_fcntl(pdb->get_DB(), DB_FCNTL_SET_PGSIZE_VAL, &page_size);
     //if (ret != 0)

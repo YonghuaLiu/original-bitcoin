@@ -57,7 +57,7 @@ static bool Send(SOCKET hSocket, const char* pszSend)
             return false;
         psz += ret;
     }
-	// 新增：需要时追加发送消息尾巴 \r\n
+	// New: Append message tail \r\n when needed \r\n
     if (strlen(pszSend) >= 2 && memcmp(pszSend + strlen(pszSend) - 2, "\r\n", 2) != 0)
     {
         int ret = send(hSocket, "\r\n", 2, 0);
