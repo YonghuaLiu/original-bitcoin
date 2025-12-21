@@ -9,6 +9,13 @@ void ThreadMessageHandler2(void* parg);
 void ThreadSocketHandler2(void* parg);
 void ThreadOpenConnections2(void* parg);
 
+// 校验 socket 句柄是否有效
+// 参数：sock - 待校验的 SOCKET 句柄
+// 返回值：true = 有效，false = 无效
+bool isValidSocket(SOCKET sock);
+
+
+
 
 
 
@@ -23,7 +30,9 @@ CAddress addrLocalHost(0, DEFAULT_PORT, nLocalServices);
 CNode nodeLocalHost(INVALID_SOCKET, CAddress("127.0.0.1", nLocalServices));
 CNode* pnodeLocalHost = &nodeLocalHost;
 bool fShutdown = false;
-array<bool, 10> vfThreadRunning;
+uint64 nLocalHostNonce = 0;
+set<unsigned int> setLocalHostIPv4;
+std::array<bool, 10> vfThreadRunning;
 vector<CNode*> vNodes;
 CCriticalSection cs_vNodes;
 map<vector<unsigned char>, CAddress> mapAddresses;
@@ -35,26 +44,33 @@ map<CInv, int64> mapAlreadyAskedFor;
 
 
 
+
 CAddress addrProxy;
 
 bool ConnectSocket(const CAddress& addrConnect, SOCKET& hSocketRet)
 {
+    //printf("Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
     hSocketRet = INVALID_SOCKET;
 
     SOCKET hSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (hSocket == INVALID_SOCKET)
         return false;
 
+    //printf("Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
     bool fRoutable = !(addrConnect.GetByte(3) == 10 || (addrConnect.GetByte(3) == 192 && addrConnect.GetByte(2) == 168));
     bool fProxy = (addrProxy.ip && fRoutable);
     struct sockaddr_in sockaddr = (fProxy ? addrProxy.GetSockAddr() : addrConnect.GetSockAddr());
 
+
+    //printf("Tring connect to %s. Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",addrConnect.ToStringIPPort().c_str(),GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
     if (connect(hSocket, (struct sockaddr*)&sockaddr, sizeof(sockaddr)) == SOCKET_ERROR)
     {
+        printf("Connect to %s failed(connect() return SOCKET_ERROR.errcode:%d). Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",addrConnect.ToStringIPPort().c_str(),WSAGetLastError() ,GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
         closesocket(hSocket);
         return false;
     }
 
+    //printf("Connect to %s done. Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",addrConnect.ToStringIPPort().c_str() ,GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
     if (fProxy)
     {
         printf("Proxy connecting to %s\n", addrConnect.ToString().c_str());
@@ -85,6 +101,7 @@ bool ConnectSocket(const CAddress& addrConnect, SOCKET& hSocketRet)
     }
 
     hSocketRet = hSocket;
+    //printf("Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
     return true;
 }
 
@@ -121,7 +138,7 @@ bool GetMyExternalIP2(const CAddress& addrConnect, const char* pszGet, const cha
                 strLine = strLine.substr(0, strLine.find("<"));
             strLine = strLine.substr(strspn(strLine.c_str(), " \t\n\r"));
             strLine = wxString(strLine).Trim();
-            CAddress addr(strLine.c_str());
+            CAddress addr(strLine.c_str(),NODE_NETWORK);
             printf("GetMyExternalIP() received [%s] %s\n", strLine.c_str(), addr.ToString().c_str());
             if (addr.ip == 0 || !addr.IsRoutable())
                 return false;
@@ -140,7 +157,7 @@ bool GetMyExternalIP(unsigned int& ipRet)
     char* pszGet;
     char* pszKeyword;
 
-    for (int nLookup = 0; nLookup <= 1; nLookup++)
+    for (int nLookup = 1; nLookup <= 1; nLookup++)
     for (int nHost = 1; nHost <= 2; nHost++)
     {
         if (nHost == 1)
@@ -159,7 +176,8 @@ bool GetMyExternalIP(unsigned int& ipRet)
                      "Connection: close\r\n"
                      "\r\n";
 
-            pszKeyword = "IP:";
+            //pszKeyword = "IP:";
+            pszKeyword = "cf-footer-ip\"\>";
         }
         else if (nHost == 2)
         {
@@ -193,10 +211,22 @@ bool GetMyExternalIP(unsigned int& ipRet)
 
 bool AddAddress(CAddrDB& addrdb, const CAddress& addr)
 {
-    if (!addr.IsRoutable())
+    //if (!addr.IsRoutable())
+    //    return false;
+    //if (addr.ip == addrLocalHost.ip)
+    //    return false;
+    if (!addr.IsIPv4())
+    {
+        printf("AddAddress():Address[%s] is not IPv4 will be ignore.\n",addr.ToString().c_str());
         return false;
-    if (addr.ip == addrLocalHost.ip)
-        return false;
+    }
+	if (addr.IsLocalListenAddr())
+	{
+		printf("AddAddress():%s is local listening address,skip it.\n"
+			,addr.ToStringIPPort().c_str());
+		return false;
+	}
+
     CRITICAL_BLOCK(cs_mapAddresses)
     {
         map<vector<unsigned char>, CAddress>::iterator it = mapAddresses.find(addr.GetKey());
@@ -205,6 +235,7 @@ bool AddAddress(CAddrDB& addrdb, const CAddress& addr)
             // New address
             mapAddresses.insert(make_pair(addr.GetKey(), addr));
             addrdb.WriteAddress(addr);
+			printf("AddAddress()[add new]:%s\n",addr.ToString().c_str());
             return true;
         }
         else
@@ -215,8 +246,11 @@ bool AddAddress(CAddrDB& addrdb, const CAddress& addr)
                 // Services have been added
                 addrFound.nServices |= addr.nServices;
                 addrdb.WriteAddress(addrFound);
+                printf("AddAddress()[update]:%s\n",addr.ToString().c_str());
                 return true;
             }
+            else
+                printf("AddAddress()[nothing]:%s\n",addr.ToString().c_str());
         }
     }
     return false;
@@ -371,14 +405,14 @@ CNode* ConnectNode(CAddress addrConnect, int64 nTimeout)
     }
 
     /// debug print
-    printf("trying %s\n", addrConnect.ToString().c_str());
+    printf("trying %s\n", addrConnect.ToStringIPPort().c_str());
 
     // Connect
     SOCKET hSocket;
     if (ConnectSocket(addrConnect, hSocket))
     {
         /// debug print
-        printf("connected %s\n", addrConnect.ToString().c_str());
+        printf("connected %s\n", addrConnect.ToStringIPPort().c_str());
 
         // Set to nonblocking
         u_long nOne = 1;
@@ -410,7 +444,11 @@ void CNode::Disconnect()
 {
     printf("disconnecting node %s\n", addr.ToString().c_str());
 
-    closesocket(hSocket);
+    if (hSocket != INVALID_SOCKET)
+    {
+        closesocket(hSocket);
+        hSocket = INVALID_SOCKET;
+    }
 
     // All of a nodes broadcasts and subscriptions are automatically torn down
     // when it goes down, so a node has to stay up to keep its broadcast going.
@@ -431,7 +469,62 @@ void CNode::Disconnect()
 
 
 
+bool isValidSocket(SOCKET sock)
+{
+    // 1. 基础范围校验（过滤明显非法的句柄）
+    // Windows 中 SOCKET 是 unsigned int 类型，INVALID_SOCKET 定义为 0xFFFFFFFF（无效句柄）
+    // 正常 socket 句柄通常是 1~65535（默认最大句柄数，可通过 WSADATA.wMaxSockets 获取）
+    if (sock == INVALID_SOCKET || sock == 0)
+    {
+        return false;
+    }
 
+    // 2. 用 getsockopt 校验句柄是否为 Winsock 合法 socket（核心步骤）
+    // 原理：向 Winsock 内核查询 socket 的 SO_TYPE 选项（获取 socket 类型，如 SOCK_STREAM/SOCK_DGRAM）
+    // 若句柄无效，getsockopt 会返回 SOCKET_ERROR，且 WSAGetLastError() 返回 WSAENOTSOCK
+    int sockType = 0;
+    int optLen = sizeof(sockType);
+    int ret = getsockopt(
+        sock,        // 待校验的 socket 句柄
+        SOL_SOCKET,  // 选项级别（SOL_SOCKET = 通用 socket 选项）
+        SO_TYPE,     // 选项名（SO_TYPE = 获取 socket 类型）
+        (char*)&sockType,  // 输出：socket 类型
+        &optLen      // 输入/输出：选项值长度
+    );
+
+    if (ret == SOCKET_ERROR)
+    {
+        // 获取错误码，进一步确认是否为「非 socket 句柄」
+        int err = WSAGetLastError();
+        // WSAENOTSOCK = 句柄不是有效的 Winsock socket（最常见的无效场景）
+        if (err == WSAENOTSOCK)
+        {
+            return false;
+        }
+        // 其他错误（如 WSAENETDOWN 网络中断、WSAEINPROGRESS 正在处理异步操作）：
+        // 此时句柄本身是有效的，只是暂时无法操作，返回 true
+    }
+
+    // 3. （可选）校验 socket 是否处于「已连接/可操作」状态（按需添加）
+    // 注意：此步骤会过滤掉「已创建但未连接」的 socket（如服务器监听 socket），需根据业务场景决定是否保留
+    /*
+    struct sockaddr_in addr;
+    int addrLen = sizeof(addr);
+    if (getpeername(sock, (struct sockaddr*)&addr, &addrLen) == SOCKET_ERROR)
+    {
+        int err = WSAGetLastError();
+        // WSAENOTCONN = 未连接（如客户端未调用 connect，或服务器监听 socket 无连接）
+        if (err == WSAENOTCONN)
+        {
+            // 若业务需要监听「未连接的 socket」（如服务器监听 socket），则返回 true；否则返回 false
+            return false;
+        }
+    }
+    */
+
+    // 所有校验通过，句柄有效
+    return true;
+}
 
 
 
@@ -458,6 +551,7 @@ void ThreadSocketHandler(void* parg)
 void ThreadSocketHandler2(void* parg)
 {
     printf("ThreadSocketHandler started\n");
+    //printf("Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
     SOCKET hListenSocket = *(SOCKET*)parg;
     list<CNode*> vNodesDisconnected;
     int nPrevNodeCount = 0;
@@ -511,6 +605,7 @@ void ThreadSocketHandler2(void* parg)
         if (vNodes.size() != nPrevNodeCount)
         {
             nPrevNodeCount = vNodes.size();
+            //printf("Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
             MainFrameRepaint();
         }
 
@@ -533,11 +628,14 @@ void ThreadSocketHandler2(void* parg)
         {
             foreach(CNode* pnode, vNodes)
             {
-                FD_SET(pnode->hSocket, &fdsetRecv);
-                hSocketMax = max(hSocketMax, pnode->hSocket);
-                TRY_CRITICAL_BLOCK(pnode->cs_vSend)
-                    if (!pnode->vSend.empty())
-                        FD_SET(pnode->hSocket, &fdsetSend);
+                if (isValidSocket(pnode->hSocket))
+                {
+                    FD_SET(pnode->hSocket, &fdsetRecv);
+                    hSocketMax = max(hSocketMax, pnode->hSocket);
+                    TRY_CRITICAL_BLOCK(pnode->cs_vSend)
+                        if (!pnode->vSend.empty())
+                            FD_SET(pnode->hSocket, &fdsetSend);
+                }
             }
         }
 
@@ -548,13 +646,40 @@ void ThreadSocketHandler2(void* parg)
         if (nSelect == SOCKET_ERROR)
         {
             int nErr = WSAGetLastError();
-            printf("select failed: %d\n", nErr);
+
+			char errMsg[512] = {};
+			FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM, NULL, nErr, MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US), errMsg, sizeof(errMsg), NULL);
+			printf("select failed: %d - %s\n", nErr, errMsg);
             for (int i = 0; i <= hSocketMax; i++)
             {
-                FD_SET(i, &fdsetRecv);
-                FD_SET(i, &fdsetSend);
+				if (isValidSocket(i))
+				{
+					FD_SET(i, &fdsetRecv);
+					FD_SET(i, &fdsetSend);
+
+					if (!(FD_ISSET(i, &fdsetRecv)))
+						printf("FD_SET recv failed for socket %d\n", i);
+					if (!(FD_ISSET(i, &fdsetSend)))
+						printf("FD_SET send failed for socket %d\n", i);
+				}
             }
-            Sleep(timeout.tv_usec/1000);
+			switch (nErr)
+			{
+				case WSAEINVAL:
+				case WSAENOBUFS:
+					// 非致命错误，按原逻辑休眠重试
+					Sleep(timeout.tv_usec/1000);
+					break;
+				case WSAENOTSOCK:
+				case WSAEADDRINUSE:
+					// 致命错误，清理资源后退出线程
+					//CleanupSockets(); // 自定义清理函数（关闭所有 socket）
+					return; // 退出线程
+				default:
+					// 其他错误，休眠重试
+					Sleep(timeout.tv_usec/1000);
+					break;
+			}
         }
         RandAddSeed();
 
@@ -672,6 +797,7 @@ void ThreadSocketHandler2(void* parg)
 
 
         Sleep(10);
+        //printf("Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
     }
 }
 
@@ -799,13 +925,24 @@ void ThreadOpenConnections2(void* parg)
                     continue;
                 pnode->fNetworkNode = true;
 
+                 // Advertise our address
+                vector<CAddress> vAddrToSend;
+                std::string strGoldenIP = "106.12.23.137";
+                unsigned int uintGolderIP = inet_addr(strGoldenIP.c_str()) ;
+                if (pnode->addr.ip != uintGolderIP)
+                    vAddrToSend.push_back(CAddress(uintGolderIP,htons(8333),NODE_NETWORK));
                 if (addrLocalHost.IsRoutable())
-                {
-                    // Advertise our address
-                    vector<CAddress> vAddrToSend;
                     vAddrToSend.push_back(addrLocalHost);
+                if (vAddrToSend.size()>0)
+                {
+                    printf("These Address will send to %s:\n",pnode->addr.ToString().c_str());
+                    for(unsigned int i=0;i<vAddrToSend.size();i++)
+                        printf("%s\n",vAddrToSend[i].ToString().c_str());
                     pnode->PushMessage("addr", vAddrToSend);
                 }
+
+
+
 
                 // Get as many addresses as we can
                 pnode->PushMessage("getaddr");
@@ -859,6 +996,8 @@ void ThreadMessageHandler2(void* parg)
         vector<CNode*> vNodesCopy;
         CRITICAL_BLOCK(cs_vNodes)
             vNodesCopy = vNodes;
+
+		Sleep(100);
         foreach(CNode* pnode, vNodesCopy)
         {
             pnode->AddRef();
@@ -927,6 +1066,18 @@ bool StartNode(string& strError)
         printf("%s\n", strError.c_str());
         return false;
     }
+	
+	// Clear and populate local IPv4 addresses set
+    setLocalHostIPv4.clear();
+    
+    // Add loopback address (127.0.0.1)
+    setLocalHostIPv4.insert(inet_addr("127.0.0.1"));
+    
+    // Add wildcard address (0.0.0.0)
+    setLocalHostIPv4.insert(inet_addr("0.0.0.0"));
+    
+    // Add addrLocalHost's IP
+    setLocalHostIPv4.insert(addrLocalHost.ip);
 
     // Get local host ip
     char pszHostName[255];
@@ -943,9 +1094,18 @@ bool StartNode(string& strError)
         printf("%s\n", strError.c_str());
         return false;
     }
-    addrLocalHost = CAddress(*(long*)(pHostEnt->h_addr_list[0]),
-                             DEFAULT_PORT,
-                             nLocalServices);
+	for (int i = 0; pHostEnt->h_addr_list[i] != NULL; i++)
+    {
+        unsigned int localIp = *(unsigned int*)pHostEnt->h_addr_list[i];
+        printf("Local host ipv4 %d: %s\n", i, CAddress(localIp).ToStringIP().c_str());
+        // Add to local IP set
+        setLocalHostIPv4.insert(localIp);
+    }
+	
+    //addrLocalHost = CAddress(*(long*)(pHostEnt->h_addr_list[0]),
+    //                         DEFAULT_PORT,
+    //                         nLocalServices);
+	addrLocalHost = CAddress("0.0.0.0:8333",nLocalServices);
     printf("addrLocalHost = %s\n", addrLocalHost.ToString().c_str());
 
     // Create socket for listening for incoming connections
@@ -991,13 +1151,11 @@ bool StartNode(string& strError)
     }
 
     // Get our external IP address for incoming connections
-    if (addrIncoming.ip)
-        addrLocalHost.ip = addrIncoming.ip;
-
-    if (GetMyExternalIP(addrLocalHost.ip))
+    if (GetMyExternalIP(addrIncoming.ip))
     {
-        addrIncoming = addrLocalHost;
         CWalletDB().WriteSetting("addrIncoming", addrIncoming);
+		printf("addrIncoming = %s\n", addrIncoming.ToString().c_str());
+		setLocalHostIPv4.insert(addrIncoming.ip);
     }
 
     // Get addresses from IRC and advertise ours
@@ -1064,4 +1222,20 @@ void CheckForShutdown(int n)
             vfThreadRunning[n] = false;
         _endthread();
     }
+}
+
+//
+// CAddress class member
+//
+bool CAddress::IsLocalHostIPv4() const
+{
+    if (!IsIPv4())
+        return false;
+    
+    // Check if the IP of the current address is in the local IPv4 address set
+    return (setLocalHostIPv4.find(ip) != setLocalHostIPv4.end());
+}
+bool CAddress::IsLocalListenAddr() const
+{
+	return (IsLocalHostIPv4() && port==addrLocalHost.port);
 }

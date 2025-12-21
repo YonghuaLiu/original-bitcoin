@@ -203,11 +203,13 @@ protected:
     virtual void OnKillFocusTransactionFee(wxFocusEvent& event){ event.Skip(); }
     virtual void OnButtonOK(wxCommandEvent& event){ event.Skip(); }
     virtual void OnButtonCancel(wxCommandEvent& event){ event.Skip(); }
+	
 
 
 public:
     COptionsDialogBase(wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Options"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(500,261), long style = wxDEFAULT_DIALOG_STYLE);
     ~COptionsDialogBase();
+	//virtual bool OnInitDialog();
 
 };
 
@@ -234,7 +236,7 @@ protected:
 
 public:
     wxStaticText* m_staticTextVersion;
-    CAboutDialogBase(wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("About Bitcoin"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(507,298), long style = wxDEFAULT_DIALOG_STYLE);
+    CAboutDialogBase(wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("About Bitcoin"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(507,400), long style = wxDEFAULT_DIALOG_STYLE);
     ~CAboutDialogBase();
 
 };

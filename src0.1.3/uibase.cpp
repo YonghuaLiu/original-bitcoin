@@ -10,11 +10,29 @@
 ///////////////////////////////////////////////////////////////////////////
 
 #include "uibase.h"
+#include "headers.h"
+//#include "util.h"
 
 ///////////////////////////////////////////////////////////////////////////
-
+//inline int OutputDebugStringF(const char* pszFormat, ...)
+//{
+//#ifdef __WXDEBUG__
+//    // log file
+//    FILE* fileout = fopen("debug.log", "a");
+//    if (fileout)
+//    {
+//        va_list arg_ptr;
+//        va_start(arg_ptr, pszFormat);
+//        vfprintf(fileout, pszFormat, arg_ptr);
+//        va_end(arg_ptr);
+//        fclose(fileout);
+//    }
+//#endif // __WXDEBUG__
+//    return 0;
+//}
 CMainFrameBase::CMainFrameBase(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxFrame(parent, id, title, pos, size, style)
 {
+    OutputDebugStringF("Start running  CMainFrameBase::CMainFrameBase () ...\n");
     this->SetSizeHints(wxDefaultSize, wxDefaultSize);
     this->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_BTNFACE));
 
@@ -60,14 +78,17 @@ CMainFrameBase::CMainFrameBase(wxWindow* parent, wxWindowID id, const wxString& 
     m_statusBar = this->CreateStatusBar(1, wxST_SIZEGRIP, wxID_ANY);
     m_statusBar->SetBackgroundColour(wxColour(240, 240, 240));
 
+    //OutputDebugStringF("Running  CMainFrameBase::CMainFrameBase () to line %d.\n",__LINE__);
     wxBoxSizer* bSizer2;
     bSizer2 = new wxBoxSizer(wxVERTICAL);
+    //OutputDebugStringF("Running  CMainFrameBase::CMainFrameBase () to line %d.\n",__LINE__);
 
 
     bSizer2->Add(0, 2, 0, wxEXPAND, 5);
 
     wxBoxSizer* bSizer85;
     bSizer85 = new wxBoxSizer(wxHORIZONTAL);
+    //OutputDebugStringF("Running  CMainFrameBase::CMainFrameBase () to line %d.\n",__LINE__);
 
     m_staticText32 = new wxStaticText(this, wxID_ANY, wxT("Your Bitcoin Address:"), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText32->Wrap(-1);
@@ -84,6 +105,7 @@ CMainFrameBase::CMainFrameBase(wxWindow* parent, wxWindowID id, const wxString& 
     m_button91 = new wxButton(this, wxID_BUTTONCHANGE, wxT("C&hange..."), wxDefaultPosition, wxDefaultSize, 0);
     bSizer85->Add(m_button91, 0, wxRIGHT, 5);
 
+    //OutputDebugStringF("Running  CMainFrameBase::CMainFrameBase () to line %d.\n",__LINE__);
 
     bSizer85->Add(0, 0, 0, wxEXPAND, 5);
 
@@ -100,6 +122,8 @@ CMainFrameBase::CMainFrameBase(wxWindow* parent, wxWindowID id, const wxString& 
     m_staticText41->Wrap(-1);
     bSizer66->Add(m_staticText41, 0, wxALIGN_CENTER_VERTICAL|wxTOP|wxBOTTOM|wxLEFT, 5);
 
+    //OutputDebugStringF("Running  CMainFrameBase::CMainFrameBase () to line %d.\n",__LINE__);
+
     m_staticTextBalance = new wxStaticText(m_panel14, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(120,15), wxALIGN_RIGHT|wxST_NO_AUTORESIZE);
     m_staticTextBalance->Wrap(-1);
     m_staticTextBalance->SetFont(wxFont(8, 70, 90, 90, false, wxEmptyString));
@@ -107,11 +131,18 @@ CMainFrameBase::CMainFrameBase(wxWindow* parent, wxWindowID id, const wxString& 
 
     bSizer66->Add(m_staticTextBalance, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
 
+    //OutputDebugStringF("Running  CMainFrameBase::CMainFrameBase () to line %d.\n",__LINE__);
+
     m_panel14->SetSizer(bSizer66);
     m_panel14->Layout();
+    //OutputDebugStringF("Running  CMainFrameBase::CMainFrameBase () to line %d.\n",__LINE__);
     bSizer66->Fit(m_panel14);
-    bSizer3->Add(m_panel14, 1, wxEXPAND|wxALIGN_BOTTOM|wxALL, 5);
+    //OutputDebugStringF("Running  CMainFrameBase::CMainFrameBase () to line %d.\n",__LINE__);
+    //OutputDebugStringF("m_panel14: %p, bSizer3: %p\n", m_panel14, bSizer3);
+    //bSizer3->Add(m_panel14, 1, wxEXPAND|wxALIGN_BOTTOM|wxALL, 5);
+    bSizer3->Add(m_panel14, 1, wxEXPAND|wxALL, 5);
 
+    //OutputDebugStringF("Running  CMainFrameBase::CMainFrameBase () to line %d.\n",__LINE__);
 
     bSizer3->Add(0, 0, 0, wxEXPAND, 5);
 
@@ -204,6 +235,8 @@ CMainFrameBase::CMainFrameBase(wxWindow* parent, wxWindowID id, const wxString& 
     this->SetSizer(bSizer2);
     this->Layout();
 
+    //OutputDebugStringF("Running  CMainFrameBase::CMainFrameBase () to line %d.\n",__LINE__);
+
     // Connect Events
     this->Connect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(CMainFrameBase::OnClose));
     this->Connect(wxEVT_IDLE, wxIdleEventHandler(CMainFrameBase::OnIdle));
@@ -250,6 +283,7 @@ CMainFrameBase::CMainFrameBase(wxWindow* parent, wxWindowID id, const wxString& 
     m_listCtrlOrdersSent->Connect(wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler(CMainFrameBase::OnListItemActivatedOrdersSent), NULL, this);
     m_listCtrlProductsSent->Connect(wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler(CMainFrameBase::OnListItemActivatedProductsSent), NULL, this);
     m_listCtrlOrdersReceived->Connect(wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler(CMainFrameBase::OnListItemActivatedOrdersReceived), NULL, this);
+    OutputDebugStringF("CMainFrameBase::CMainFrameBase () run done.\n");
 }
 
 CMainFrameBase::~CMainFrameBase()
@@ -338,9 +372,69 @@ CTxDetailsDialogBase::~CTxDetailsDialogBase()
     m_buttonOK->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(CTxDetailsDialogBase::OnButtonOK), NULL, this);
 }
 
+// uibase.cpp中实现
+/*
+bool COptionsDialogBase::OnInitDialog()
+{
+
+    if (!wxDialog::OnInitDialog())
+        return false;  // 父类初始化失败，直接退出
+
+    // 所有布局和控件创建、添加操作移到这里
+    wxBoxSizer* bSizer55 = new wxBoxSizer(wxVERTICAL);
+    wxBoxSizer* bSizer57 = new wxBoxSizer(wxVERTICAL);
+    bSizer57->Add(0, 20, 0, wxEXPAND, 5);
+    m_staticTextFeeDesc = new wxStaticText(this, wxID_ANY, wxT("Optional transaction fee..."), wxDefaultPosition, wxDefaultSize, 0);
+    m_staticTextFeeDesc->Wrap(-1);
+    bSizer57->Add(m_staticTextFeeDesc, 0, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5);
+    // 后续其他控件（m_staticText31、m_textCtrlTransactionFee等）的创建和布局添加...
+	
+    bSizer57->Add(m_staticTextFeeDesc, 0, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5);
+
+    wxBoxSizer* bSizer56;
+    bSizer56 = new wxBoxSizer(wxHORIZONTAL);
+
+    m_staticText31 = new wxStaticText(this, wxID_ANY, wxT("Transaction fee:"), wxDefaultPosition, wxDefaultSize, 0);
+    m_staticText31->Wrap(-1);
+    bSizer56->Add(m_staticText31, 0, wxALIGN_CENTER_VERTICAL|wxTOP|wxBOTTOM|wxLEFT, 5);
+
+    m_textCtrlTransactionFee = new wxTextCtrl(this, wxID_TRANSACTIONFEE, wxEmptyString, wxDefaultPosition, wxSize(70,-1), 0);
+    bSizer56->Add(m_textCtrlTransactionFee, 0, wxALL|wxALIGN_CENTER_VERTICAL, 5);
+
+    bSizer57->Add(bSizer56, 0, wxEXPAND, 5);
+
+    bSizer55->Add(bSizer57, 1, wxEXPAND|wxLEFT, 5);
+
+
+    wxBoxSizer* bSizer58;
+    bSizer58 = new wxBoxSizer(wxHORIZONTAL);
+
+    m_buttonOK = new wxButton(this, wxID_OK, wxT("OK"), wxDefaultPosition, wxSize(85,25), 0);
+    bSizer58->Add(m_buttonOK, 0, wxALL, 5);
+
+    m_buttonCancel = new wxButton(this, wxID_CANCEL, wxT("Cancel"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_buttonCancel->SetMinSize(wxSize(85,25));
+
+    bSizer58->Add(m_buttonCancel, 0, wxALL, 5);
+
+    bSizer55->Add(bSizer58, 0, wxALIGN_RIGHT, 5);
+
+    this->SetSizer(bSizer55);
+    this->Layout();
+
+	m_textCtrlTransactionFee->Connect(wxEVT_KILL_FOCUS, wxFocusEventHandler(COptionsDialogBase::OnKillFocusTransactionFee), NULL, this);
+    m_buttonOK->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(COptionsDialogBase::OnButtonOK), NULL, this);
+    m_buttonCancel->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(COptionsDialogBase::OnButtonCancel), NULL, this);
+
+
+    return true;
+} 
+*/
+
 COptionsDialogBase::COptionsDialogBase(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxDialog(parent, id, title, pos, size, style)
 {
-    this->SetSizeHints(wxDefaultSize, wxDefaultSize);
+
+	this->SetSizeHints(wxDefaultSize, wxDefaultSize);
 
     wxBoxSizer* bSizer55;
     bSizer55 = new wxBoxSizer(wxVERTICAL);
@@ -353,7 +447,8 @@ COptionsDialogBase::COptionsDialogBase(wxWindow* parent, wxWindowID id, const wx
 
     m_staticText32 = new wxStaticText(this, wxID_ANY, wxT("Optional transaction fee you give to the nodes that process your transactions."), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText32->Wrap(-1);
-    bSizer57->Add(m_staticText32, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
+    //bSizer57->Add(m_staticText32, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5);
+	bSizer57->Add(m_staticText32, 0, wxALL, 5);
 
     wxBoxSizer* bSizer56;
     bSizer56 = new wxBoxSizer(wxHORIZONTAL);
@@ -425,20 +520,24 @@ CAboutDialogBase::CAboutDialogBase(wxWindow* parent, wxWindowID id, const wxStri
     m_staticText40->Wrap(-1);
     m_staticText40->SetFont(wxFont(10, 74, 90, 92, false, wxT("Tahoma")));
 
+
     bSizer64->Add(m_staticText40, 0, wxALIGN_BOTTOM|wxTOP|wxBOTTOM|wxLEFT, 5);
 
     m_staticTextVersion = new wxStaticText(this, wxID_ANY, wxT("version"), wxDefaultPosition, wxDefaultSize, 0);
     m_staticTextVersion->Wrap(-1);
     m_staticTextVersion->SetFont(wxFont(10, 74, 90, 90, false, wxT("Tahoma")));
 
+
+
     bSizer64->Add(m_staticTextVersion, 0, wxALIGN_BOTTOM|wxTOP|wxBOTTOM|wxRIGHT, 5);
+
 
     bSizer63->Add(bSizer64, 0, wxEXPAND, 5);
 
 
     bSizer63->Add(0, 4, 0, wxEXPAND, 5);
 
-    m_staticTextMain = new wxStaticText(this, wxID_ANY, wxT("Copyright © 2009 Satoshi Nakamoto.\n\nThis is experimental software.  Do not rely on it for actual financial transactions.\n\nDistributed under the MIT/X11 software license, see the accompanying file license.txt or http://www.opensource.org/licenses/mit-license.php.\n\nThis product includes software developed by the OpenSSL Project for use in the OpenSSL Toolkit (http://www.openssl.org/) and cryptographic software written by Eric Young (eay@cryptsoft.com)."), wxDefaultPosition, wxDefaultSize, 0);
+    m_staticTextMain = new wxStaticText(this, wxID_ANY, wxT("Copyright © 2009 Satoshi Nakamoto.\nCopyright © 2025 Digital People Tribe.\n\nThis is experimental software.  Do not rely on it for actual financial transactions.\n\nDistributed under the MIT/X11 software license, see the accompanying file license.txt or http://www.opensource.org/licenses/mit-license.php.\n\nThis product includes software developed by the OpenSSL Project for use in the OpenSSL Toolkit (http://www.openssl.org/) and cryptographic software written by Eric Young (eay@cryptsoft.com)."), wxDefaultPosition, wxDefaultSize, 0);
     m_staticTextMain->Wrap(400);
     bSizer63->Add(m_staticTextMain, 0, wxALL, 5);
 
@@ -458,13 +557,17 @@ CAboutDialogBase::CAboutDialogBase(wxWindow* parent, wxWindowID id, const wxStri
     m_buttonOK = new wxButton(this, wxID_OK, wxT("OK"), wxDefaultPosition, wxSize(85,25), 0);
     bSizer61->Add(m_buttonOK, 0, wxALL, 5);
 
-    bSizer60->Add(bSizer61, 0, wxALIGN_RIGHT|wxEXPAND, 5);
+
+    //bSizer60->Add(bSizer61, 0, wxALIGN_RIGHT|wxEXPAND, 5);
+	bSizer60->Add(bSizer61, 0, wxEXPAND, 5);
+
+
 
     this->SetSizer(bSizer60);
     this->Layout();
 
     // Connect Events
-    m_buttonOK->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(CAboutDialogBase::OnButtonOK), NULL, this);
+    //m_buttonOK->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(CAboutDialogBase::OnButtonOK), NULL, this);
 }
 
 CAboutDialogBase::~CAboutDialogBase()
@@ -480,21 +583,22 @@ CSendDialogBase::CSendDialogBase(wxWindow* parent, wxWindowID id, const wxString
     wxBoxSizer* bSizer21;
     bSizer21 = new wxBoxSizer(wxVERTICAL);
 
-
+	
     bSizer21->Add(0, 5, 0, wxEXPAND, 5);
 
     wxFlexGridSizer* fgSizer1;
-    fgSizer1 = new wxFlexGridSizer(3, 2, 0, 0);
+    fgSizer1 = new wxFlexGridSizer(4, 2, 0, 0);
     fgSizer1->AddGrowableCol(1);
     fgSizer1->SetFlexibleDirection(wxBOTH);
     fgSizer1->SetNonFlexibleGrowMode(wxFLEX_GROWMODE_SPECIFIED);
 
-
+	
     fgSizer1->Add(0, 0, 0, wxEXPAND, 5);
 
-    m_staticText14 = new wxStaticText(this, wxID_ANY, wxT("Enter the recipient's IP address (e.g. 123.45.6.7) for online transfer with comments and confirmation, \nor bitcoin address (e.g. 1NS17iag9jJgTHD1VXjvLCEnZuQ3rJED9L) if recipient is not online."), wxDefaultPosition, wxDefaultSize, 0);
+    m_staticText14 = new wxStaticText(this, wxID_ANY, wxT("Enter the recipient's IP address (e.g. 123.45.6.7) for online transfer with comments and confirmation,\nor bitcoin address (e.g. 1NS17iag9jJgTHD1VXjvLCEnZuQ3rJED9L) if recipient is not online."), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText14->Wrap(-1);
-    fgSizer1->Add(m_staticText14, 0, wxTOP|wxRIGHT|wxLEFT, 5);
+    //fgSizer1->Add(m_staticText14, 0, wxTOP|wxRIGHT|wxLEFT, 5);
+	fgSizer1->Add(m_staticText14, 0, wxTOP|wxLEFT, 5);
 
     wxBoxSizer* bSizer47;
     bSizer47 = new wxBoxSizer(wxHORIZONTAL);
@@ -511,7 +615,8 @@ CSendDialogBase::CSendDialogBase(wxWindow* parent, wxWindowID id, const wxString
     bSizer47->Add(m_staticText36, 0, wxALIGN_CENTER_VERTICAL|wxTOP|wxBOTTOM|wxLEFT, 5);
 
     fgSizer1->Add(bSizer47, 1, wxEXPAND|wxLEFT, 5);
-
+	
+	
     wxBoxSizer* bSizer19;
     bSizer19 = new wxBoxSizer(wxHORIZONTAL);
 
@@ -525,6 +630,7 @@ CSendDialogBase::CSendDialogBase(wxWindow* parent, wxWindowID id, const wxString
     bSizer19->Add(m_buttonAddress, 0, wxALIGN_CENTER_VERTICAL|wxRIGHT, 5);
 
     fgSizer1->Add(bSizer19, 1, wxEXPAND|wxRIGHT, 5);
+	
 
     m_staticText19 = new wxStaticText(this, wxID_ANY, wxT("&Amount:"), wxDefaultPosition, wxSize(-1,-1), wxALIGN_RIGHT);
     m_staticText19->Wrap(-1);
@@ -539,7 +645,8 @@ CSendDialogBase::CSendDialogBase(wxWindow* parent, wxWindowID id, const wxString
     m_staticText20 = new wxStaticText(this, wxID_ANY, wxT("T&ransfer:"), wxDefaultPosition, wxSize(-1,-1), wxALIGN_RIGHT);
     m_staticText20->Wrap(-1);
     fgSizer1->Add(m_staticText20, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxTOP|wxBOTTOM|wxLEFT, 5);
-
+	
+	
     wxString m_choiceTransferTypeChoices[] = { wxT(" Standard") };
     int m_choiceTransferTypeNChoices = sizeof(m_choiceTransferTypeChoices) / sizeof(wxString);
     m_choiceTransferType = new wxChoice(this, wxID_CHOICETRANSFERTYPE, wxDefaultPosition, wxDefaultSize, m_choiceTransferTypeNChoices, m_choiceTransferTypeChoices, 0);
@@ -564,7 +671,8 @@ CSendDialogBase::CSendDialogBase(wxWindow* parent, wxWindowID id, const wxString
     bSizer672->Add(bSizer681, 1, wxEXPAND|wxBOTTOM|wxRIGHT|wxLEFT, 5);
 
     bSizer21->Add(bSizer672, 0, wxEXPAND, 5);
-
+	
+	
     wxBoxSizer* bSizer67;
     bSizer67 = new wxBoxSizer(wxHORIZONTAL);
 
@@ -579,9 +687,11 @@ CSendDialogBase::CSendDialogBase(wxWindow* parent, wxWindowID id, const wxString
     bSizer68->Add(m_textCtrlMessage, 1, wxEXPAND|wxLEFT, 5);
 
     bSizer67->Add(bSizer68, 1, wxEXPAND|wxBOTTOM|wxRIGHT|wxLEFT, 5);
+	
 
     bSizer21->Add(bSizer67, 1, wxEXPAND, 5);
-
+	
+	
     wxBoxSizer* bSizer23;
     bSizer23 = new wxBoxSizer(wxHORIZONTAL);
 
@@ -600,9 +710,16 @@ CSendDialogBase::CSendDialogBase(wxWindow* parent, wxWindowID id, const wxString
     bSizer23->Add(m_buttonCancel, 0, wxALL, 5);
 
     bSizer21->Add(bSizer23, 0, wxEXPAND, 5);
-
+	
+	
     this->SetSizer(bSizer21);
     this->Layout();
+	// 关键代码：自动适配子控件的最佳尺寸（推荐优先使用）
+	this->Fit();  // 窗口大小 = 所有子控件按布局规则排列后的总尺寸
+	
+	// 可选：如果希望窗口在 Fit 后的基础上再放大一定比例（如1.5倍）
+	//wxSize bestSize = this->GetBestSize();  // 获取 Fit 后的最佳尺寸
+	//this->SetSize(bestSize.Scale(1.5, 1.5));  // 宽高都放大1.5倍
 
     // Connect Events
     m_textCtrlAddress->Connect(wxEVT_KEY_DOWN, wxKeyEventHandler(CSendDialogBase::OnKeyDown), NULL, this);

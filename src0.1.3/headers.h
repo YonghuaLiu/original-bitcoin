@@ -13,6 +13,7 @@
 #define _WIN32_WINNT 0x0400
 #define WIN32_LEAN_AND_MEAN 1
 #include <wx/wx.h>
+//#include <wx/string.h>
 #include <wx/clipbrd.h>
 #include <wx/snglinst.h>
 #include <openssl/ecdsa.h>

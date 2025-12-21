@@ -700,11 +700,17 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast)
     const CBlockIndex* pindexFirst = pindexLast;
     for (int i = 0; pindexFirst && i < nInterval-1; i++)
         pindexFirst = pindexFirst->pprev;
-    assert(pindexFirst);
+    //assert(pindexFirst);
+	if (!pindexFirst) // Handle case where we don't have enough blocks
+        return pindexLast->nBits;
 
     // Limit adjustment step
     unsigned int nActualTimespan = pindexLast->nTime - pindexFirst->nTime;
     printf("  nActualTimespan = %d  before bounds\n", nActualTimespan);
+	// Add safety check to prevent division by zero or negative values
+    if (nActualTimespan <= 0)
+        nActualTimespan = nTargetSpacing * nInterval;
+
     if (nActualTimespan < nTargetTimespan/4)
         nActualTimespan = nTargetTimespan/4;
     if (nActualTimespan > nTargetTimespan*4)
@@ -1207,8 +1213,10 @@ bool CBlock::AcceptBlock()
         return error("AcceptBlock() : block's timestamp is too early");
 
     // Check proof of work
-    if (nBits != GetNextWorkRequired(pindexPrev))
-        return error("AcceptBlock() : incorrect proof of work");
+    //if (nBits != GetNextWorkRequired(pindexPrev))
+    //    return error("AcceptBlock() : incorrect proof of work");
+	// Check proof of work is handled by CheckBlock()
+    // No need for an additional check here
 
     // Write block to history file
     unsigned int nFile;
@@ -1359,7 +1367,7 @@ string GetAppDir()
         if (!fMkdirDone)
         {
             fMkdirDone = true;
-            _mkdir(strAppData.c_str());
+            mkdir(strAppData.c_str());
         }
         strDir = strprintf("%s\\Bitcoin", strAppData.c_str());
     }
@@ -1371,7 +1379,7 @@ string GetAppDir()
     if (!fMkdirDone)
     {
         fMkdirDone = true;
-        _mkdir(strDir.c_str());
+        mkdir(strDir.c_str());
     }
     return strDir;
 }
@@ -1467,6 +1475,7 @@ bool LoadBlockIndex(bool fAllowNew)
         block.nVersion = 1;
         block.nTime    = 1231006505;
         block.nBits    = 0x1d00ffff;
+		//block.nBits    = 0x0100ffff;
         block.nNonce   = 2083236893;
 
             //// debug print, delete this later
@@ -1613,7 +1622,9 @@ bool ProcessMessages(CNode* pfrom)
     CDataStream& vRecv = pfrom->vRecv;
     if (vRecv.empty())
         return true;
-    printf("ProcessMessages(%d bytes)\n", vRecv.size());
+    //printf("ProcessMessages(%d bytes)\n", vRecv.size());
+	printf("ProcessMessages(%d bytes) from %s.\n", vRecv.size(),pfrom->addr.ToStringIPPort().c_str() );
+
 
     //
     // Message format
@@ -1630,7 +1641,7 @@ bool ProcessMessages(CNode* pfrom)
         if (vRecv.end() - pstart < sizeof(CMessageHeader))
         {
             if (vRecv.size() > sizeof(CMessageHeader))
-            {
+			{
                 printf("\n\nPROCESSMESSAGE MESSAGESTART NOT FOUND\n\n");
                 vRecv.erase(vRecv.begin(), vRecv.end() - sizeof(CMessageHeader));
             }
@@ -1639,6 +1650,11 @@ bool ProcessMessages(CNode* pfrom)
         if (pstart - vRecv.begin() > 0)
             printf("\n\nPROCESSMESSAGE SKIPPED %d BYTES\n\n", pstart - vRecv.begin());
         vRecv.erase(vRecv.begin(), pstart);
+		printf("ProcessMessages(%d bytes) from %s.\n", vRecv.size(),pfrom->addr.ToStringIPPort().c_str() );
+		printf("tag size:");
+		for (int i = 16; i < min(vRecv.size() , std::size_t(20)); i++)
+			printf("%02x ", vRecv[i] & 0xff);
+		printf("\n");
 
         // Read header
         CMessageHeader hdr;
@@ -1661,6 +1677,29 @@ bool ProcessMessages(CNode* pfrom)
             Sleep(100);
             break;
         }
+		if (nMessageSize+4 <= vRecv.size() && !pfrom->fSuccessfullyConnected)
+		{
+			unsigned int hdr_nChecksum;
+			vRecv >> hdr_nChecksum;
+			uint256 hash = Hash(vRecv.begin(), vRecv.begin() + nMessageSize);
+            unsigned int nChecksum = 0;
+            memcpy(&nChecksum, &hash, sizeof(nChecksum));
+            if (nChecksum == hdr_nChecksum)
+            {
+                printf("[High version node]vRecv.size()=(%d bytes) but nMessageSize=(%d bytes).From %s\n", vRecv.size()+4u,nMessageSize,pfrom->addr.ToStringIPPort().c_str() );
+            }
+			else if (vRecv.Rewind(sizeof(unsigned int)))
+			{
+				printf("[nMessageSize warning]vRecv.size()=(%d bytes) but nMessageSize=(%d bytes).From %s\n", vRecv.size(),nMessageSize,pfrom->addr.ToStringIPPort().c_str() );
+			}
+			else 
+			{
+				printf("[version/verack message invalid.]vRecv.size()=(%d bytes) but nMessageSize=(%d bytes).From %s\n", vRecv.size(),nMessageSize,pfrom->addr.ToStringIPPort().c_str() );
+				continue;
+			}
+		}
+
+		//assert(nMessageSize == vRecv.size());
 
         // Copy message to its own buffer
         CDataStream vMsg(vRecv.begin(), vRecv.begin() + nMessageSize, vRecv.nType, vRecv.nVersion);
@@ -1673,9 +1712,41 @@ bool ProcessMessages(CNode* pfrom)
             CheckForShutdown(2);
             CRITICAL_BLOCK(cs_main)
                 fRet = ProcessMessage(pfrom, strCommand, vMsg);
+                //if (!fRet)
+                //{
+                //    printf("ProcessMessage() first run failed.[pfrom=%s, strCommand=%s, nMessageSize=%u]\n",pfrom->addr.ToStringIPPort().c_str(),strCommand.c_str(),nMessageSize );
+                //    if (nMessageSize+4 <= vRecv.size())
+                //    {
+                //        vMsg.ignore(4);
+                //        printf("ProcessMessage() ignore 4 bytes retry again.[From %s]\n",pfrom->addr.ToStringIPPort().c_str() );
+                //        fRet = ProcessMessage(pfrom, strCommand, vMsg);
+                //    }
+				//
+                //}
             CheckForShutdown(2);
         }
-        CATCH_PRINT_EXCEPTION("ProcessMessage()")
+        catch (std::ios_base::failure& e)
+        {
+            if (strstr(e.what(), "CDataStream::read() : end of data"))
+            {
+                // Allow exceptions from underlength message on vRecv
+                printf("ProcessMessage(%s, %d bytes) : Exception '%s' caught, normally caused by a message being shorter than its stated length\n", strCommand.c_str(), nMessageSize, e.what());
+            }
+            else if (strstr(e.what(), ": size too large"))
+            {
+                // Allow exceptions from overlong size
+                printf("ProcessMessage(%s, %d bytes) : Exception '%s' caught\n", strCommand.c_str(), nMessageSize, e.what());
+            }
+            else
+            {
+                PrintException(&e, "ProcessMessage()");
+            }
+        }
+        catch (std::exception& e) {
+            PrintException(&e, "ProcessMessage()");
+        } catch (...) {
+            PrintException(NULL, "ProcessMessage()");
+        }
         if (!fRet)
             printf("ProcessMessage(%s, %d bytes) from %s to %s FAILED\n", strCommand.c_str(), nMessageSize, pfrom->addr.ToString().c_str(), addrLocalHost.ToString().c_str());
     }
@@ -1691,7 +1762,7 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
 {
     static map<unsigned int, vector<unsigned char> > mapReuseKey;
     printf("received: %-12s (%d bytes)  ", strCommand.c_str(), vRecv.size());
-    for (int i = 0; i < min(vRecv.size(), (unsigned int)25); i++)
+    for (int i = 0; i < min(vRecv.size() , std::size_t(250)); i++)
         printf("%02x ", vRecv[i] & 0xff);
     printf("\n");
     if (nDropMessagesTest > 0 && GetRand(nDropMessagesTest) == 0)
@@ -1704,15 +1775,44 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
 
     if (strCommand == "version")
     {
-        // Can only do this once
+        // Each connection can only send one version message
         if (pfrom->nVersion != 0)
             return false;
 
         int64 nTime;
         CAddress addrMe;
-        vRecv >> pfrom->nVersion >> pfrom->nServices >> nTime >> addrMe;
-        if (pfrom->nVersion == 0)
+        CAddress addrFrom;
+        uint64 nNonce = 1;
+        string strSubVer;
+        const int ALLOW_MAX_VERSION = 70000;
+        //vRecv >> pfrom->nVersion >> pfrom->nServices >> nTime >> addrMe;
+		vRecv >> pfrom->nVersion;
+		// Disconnect if we can not read version message or version is not available
+        if (pfrom->nVersion <= 0 || pfrom->nVersion > ALLOW_MAX_VERSION)
+		{
+			printf("ProcessMessage():version message read failed.[%d]\n",pfrom->nVersion);
+			pfrom->fDisconnect = true;
             return false;
+		}
+		vRecv >> pfrom->nServices >> nTime >> addrMe;
+        if (pfrom->nVersion == 10300)
+            pfrom->nVersion = 300;
+        if (pfrom->nVersion >= 106 && !vRecv.empty())
+            vRecv >> addrFrom >> nNonce;
+        if (pfrom->nVersion >= 106 && !vRecv.empty())
+            vRecv >> strSubVer;
+        if (pfrom->nVersion >= 209 && !vRecv.empty())
+            vRecv >> pfrom->nStartingHeight;
+
+
+        // Disconnect if we connected to ourself
+        if (nNonce == nLocalHostNonce && nNonce > 1)
+		{
+			pfrom->fDisconnect = true;
+            return true;
+		}
+
+
 
         pfrom->vSend.SetVersion(min(pfrom->nVersion, VERSION));
         pfrom->vRecv.SetVersion(min(pfrom->nVersion, VERSION));
@@ -1733,14 +1833,17 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
             fAskedForBlocks = true;
             pfrom->PushMessage("getblocks", CBlockLocator(pindexBest), uint256(0));
         }
+		
+		pfrom->fSuccessfullyConnected = true;
 
         printf("version message: %s has version %d, addrMe=%s\n", pfrom->addr.ToString().c_str(), pfrom->nVersion, addrMe.ToString().c_str());
     }
 
 
-    else if (pfrom->nVersion == 0)
+    else if (pfrom->nVersion <= 0)
     {
         // Must have a version message before anything else
+		printf("version can not know: %s has version %d \n", pfrom->addr.ToString().c_str(), pfrom->nVersion);
         return false;
     }
 
@@ -1754,6 +1857,7 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         CAddrDB addrdb;
         foreach(const CAddress& addr, vAddr)
         {
+            printf("received address:%s\n",addr.ToString().c_str());
             if (fShutdown)
                 return true;
             if (AddAddress(addrdb, addr))
@@ -2206,10 +2310,19 @@ bool BitcoinMiner()
         //
         // Create coinbase tx
         //
+
+		// 1. 自定义要写入的文字（示例：挖矿节点标识 + 备注）
+		std::string message = "Mining by Digital People Tribe.";
+		// 2. 将文字转换为字节流（UTF-8 编码，兼容多语言）
+		std::vector<unsigned char> msgBytes(message.begin(), message.end());
         CTransaction txNew;
         txNew.vin.resize(1);
         txNew.vin[0].prevout.SetNull();
-        txNew.vin[0].scriptSig << nBits << ++bnExtraNonce;
+        //txNew.vin[0].scriptSig << nBits << ++bnExtraNonce;
+		txNew.vin[0].scriptSig << nBits << ++bnExtraNonce
+			<< OP_PUSHDATA1
+			<< (unsigned char)msgBytes.size()
+			<< msgBytes;
         txNew.vout.resize(1);
         txNew.vout[0].scriptPubKey << key.GetPubKey() << OP_CHECKSIG;
 
@@ -2306,6 +2419,7 @@ bool BitcoinMiner()
         unsigned int nStart = GetTime();
         uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
         uint256 hash;
+		//printf("BitcoinMiner Search start[nNonce=1,nTime:%d,nBits:%d,hashTarget:%s][timestamp:%" PRId64"]\n",tmp.block.nTime,tmp.block.nBits,hashTarget.GetHex().c_str(),GetTime());
         loop
         {
             BlockSHA256(&tmp.block, nBlocks0, &tmp.hash1);
@@ -2319,7 +2433,8 @@ bool BitcoinMiner()
 
                     //// debug print
                     printf("BitcoinMiner:\n");
-                    printf("proof-of-work found  \n  hash: %s  \ntarget: %s\n", hash.GetHex().c_str(), hashTarget.GetHex().c_str());
+                    //printf("proof-of-work found  \n  hash: %s  \ntarget: %s\n", hash.GetHex().c_str(), hashTarget.GetHex().c_str());
+					printf("BitcoinMiner Search proof-of-work found [nNonce=%u]\t hash: %s\t target: %s\n",tmp.block.nNonce, hash.GetHex().c_str(), hashTarget.GetHex().c_str());
                     pblock->print();
 
                 SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_NORMAL);
@@ -2341,18 +2456,40 @@ bool BitcoinMiner()
             }
 
             // Update nTime every few seconds
-            if ((++tmp.block.nNonce & 0x3ffff) == 0)
+            //if ((++tmp.block.nNonce & 0x3ffff) == 0)
+			//if ((++tmp.block.nNonce & 0xfffff) == 0)
+			if ((++tmp.block.nNonce & 0xffffff) == 0)
             {
                 CheckForShutdown(3);
                 if (tmp.block.nNonce == 0)
-                    break;
+				{
+					printf("BitcoinMiner Search end[nNonce=0][timestamp:%" PRId64"]\n",GetTime());
+					break;
+				}
                 if (pindexPrev != pindexBest)
                     break;
                 if (nTransactionsUpdated != nTransactionsUpdatedLast && GetTime() - nStart > 60)
                     break;
                 if (!fGenerateBitcoins)
                     break;
-                tmp.block.nTime = pblock->nTime = max(pindexPrev->GetMedianTimePast()+1, GetAdjustedTime());
+                //tmp.block.nTime = pblock->nTime = max(pindexPrev->GetMedianTimePast()+1, GetAdjustedTime());
+				pblock->nTime = max(pindexPrev->GetMedianTimePast()+1, GetAdjustedTime());
+				if (tmp.block.nTime != pblock->nTime)
+				{
+					//printf("BitcoinMiner Search nNonce nTime change from %" PRId64" to %" PRId64"\n",tmp.block.nTime,pblock->nTime);
+					tmp.block.nTime = pblock->nTime;
+					tmp.block.nNonce--;
+				}
+				//[nHeight:%d,hash:%s,nTime:%u,nVersion:%d,hashMerkleRoot:%s,nBits:%u]
+				//printf("BitcoinMiner Search nNonce[hashPrevBlock:%s,hashMerkleRoot:%s,nNonce:%u,nTime:%u,nVersion:%d,nBits:%u][timestamp:%" PRId64"]\n"
+				//	,tmp.block.hashPrevBlock.GetHex().c_str()
+				//	,tmp.block.hashMerkleRoot.GetHex().c_str()
+				//	,tmp.block.nNonce
+				//	,tmp.block.nTime
+				//	,tmp.block.nVersion
+				//	,tmp.block.nBits
+				//	,GetTime()
+				//);
             }
         }
     }

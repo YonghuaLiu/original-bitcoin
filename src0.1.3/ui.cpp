@@ -36,6 +36,9 @@ void RandSend();
 // Util
 //
 
+
+
+
 void HandleCtrlA(wxKeyEvent& event)
 {
     // Ctrl-a select all
@@ -214,12 +217,15 @@ void AddPendingCustomEvent(wxEvtHandler* pevthandler, int nEventID, const T pbeg
     const char* pbegin = (pendIn != pbeginIn) ? &pbeginIn[0] : NULL;
     const char* pend = pbegin + (pendIn - pbeginIn) * sizeof(pbeginIn[0]);
     wxCommandEvent event(nEventID);
-    wxString strData(wxChar(0), (pend - pbegin) / sizeof(wxChar) + 1);
-    memcpy(&strData[0], pbegin, pend - pbegin);
+    //wxString strData(wxChar(0), (pend - pbegin) / sizeof(wxChar) + 1);
+    //memcpy(&strData[0], pbegin, pend - pbegin);
+    wxString strData;  // 简化初始化：无需提前分配，assign 会自动处理
+    strData.assign(reinterpret_cast<const wxChar*>(pbegin), (pend - pbegin) / sizeof(wxChar));  // 替换原 memcpy 行
     event.SetString(strData);
     event.SetInt(pend - pbegin);
 
     pevthandler->AddPendingEvent(event);
+    printf("Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
 }
 
 template<class T>
@@ -251,7 +257,8 @@ void AddPendingReplyEvent3(void* pevthandler, CDataStream& vRecv)
 CDataStream GetStreamFromEvent(const wxCommandEvent& event)
 {
     wxString strData = event.GetString();
-    return CDataStream(strData.begin(), strData.begin() + event.GetInt(), SER_NETWORK);
+    //return CDataStream(strData.cbegin(), strData.cbegin() + event.GetInt(), SER_NETWORK);
+    return CDataStream(event.GetInt(), SER_NETWORK);
 }
 
 
@@ -267,6 +274,7 @@ CDataStream GetStreamFromEvent(const wxCommandEvent& event)
 
 CMainFrame::CMainFrame(wxWindow* parent) : CMainFrameBase(parent)
 {
+    printf("Start running CMainFrame::CMainFrame() ...\n");
     Connect(wxEVT_CROSSTHREADCALL, wxCommandEventHandler(CMainFrame::OnCrossThreadCall), NULL, this);
 
     // Init
@@ -333,6 +341,7 @@ CMainFrame::CMainFrame(wxWindow* parent) : CMainFrameBase(parent)
 
     // Fill listctrl with wallet transactions
     RefreshListCtrl();
+    printf("CMainFrame::CMainFrame() run done.\n");
 }
 
 CMainFrame::~CMainFrame()
@@ -711,6 +720,7 @@ void CMainFrame::OnIdle(wxIdleEvent& event)
         }
 
         printf("RefreshListCtrl done\n");
+        printf("Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
     }
     else
     {
@@ -829,8 +839,9 @@ void CMainFrame::OnMenuOptionsGenerate(wxCommandEvent& event)
             printf("Error: _beginthread(ThreadBitcoinMiner) failed\n");
 
     Refresh();
-    wxPaintEvent eventPaint;
-    AddPendingEvent(eventPaint);
+    //wxPaintEvent eventPaint;
+    //AddPendingEvent(eventPaint);
+    pframeMain->Refresh();
 }
 
 void CMainFrame::OnMenuOptionsOptions(wxCommandEvent& event)
@@ -1185,8 +1196,10 @@ CTxDetailsDialog::CTxDetailsDialog(wxWindow* parent, CWalletTx wtx) : CTxDetails
 
 void CTxDetailsDialog::OnButtonOK(wxCommandEvent& event)
 {
-    Close();
+    //Close();
     //Destroy();
+	// 替换Close()为EndModal，确保模态对话框正确关闭
+    EndModal(wxID_OK);
 }
 
 
@@ -1207,7 +1220,7 @@ COptionsDialog::COptionsDialog(wxWindow* parent) : COptionsDialogBase(parent)
 void COptionsDialog::OnKillFocusTransactionFee(wxFocusEvent& event)
 {
     int64 nTmp = nTransactionFee;
-    ParseMoney(m_textCtrlTransactionFee->GetValue(), nTmp);
+    ParseMoney(m_textCtrlTransactionFee->GetValue().ToStdString().c_str(), nTmp);
     m_textCtrlTransactionFee->SetValue(FormatMoney(nTmp));
 }
 
@@ -1215,15 +1228,19 @@ void COptionsDialog::OnButtonOK(wxCommandEvent& event)
 {
     // nTransactionFee
     int64 nPrevTransactionFee = nTransactionFee;
-    if (ParseMoney(m_textCtrlTransactionFee->GetValue(), nTransactionFee) && nTransactionFee != nPrevTransactionFee)
+    if (ParseMoney(m_textCtrlTransactionFee->GetValue().ToStdString().c_str(), nTransactionFee) && nTransactionFee != nPrevTransactionFee)
         CWalletDB().WriteSetting("nTransactionFee", nTransactionFee);
 
-    Close();
+    //Close();
+	// 替换Close()为EndModal，确保模态对话框正确关闭
+    EndModal(wxID_OK);
 }
 
 void COptionsDialog::OnButtonCancel(wxCommandEvent& event)
 {
-    Close();
+    //Close();
+	// 替换Close()为EndModal，确保模态对话框正确关闭
+    EndModal(wxID_OK);
 }
 
 
@@ -1242,14 +1259,22 @@ CAboutDialog::CAboutDialog(wxWindow* parent) : CAboutDialogBase(parent)
 
     // Workaround until upgrade to wxWidgets supporting UTF-8
     wxString str = m_staticTextMain->GetLabel();
-    if (str.Find('�') != wxNOT_FOUND)
-        str.Remove(str.Find('�'), 1);
+    if (str.Find(static_cast<wxChar>('Â')) != wxNOT_FOUND)
+        str.Remove(str.Find(static_cast<wxChar>('Â'), 1));
     m_staticTextMain->SetLabel(str);
+	printf("Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n"
+		,GetCurrentProcessMemoryMB()
+		,GetFileNameWithoutPath(__FILE__)
+		,__LINE__
+		,__FUNCTION__
+	);
 }
 
 void CAboutDialog::OnButtonOK(wxCommandEvent& event)
 {
-    Close();
+    //Close();
+	// 替换Close()为EndModal，确保模态对话框正确关闭
+    EndModal(wxID_OK);
 }
 
 
@@ -1307,7 +1332,7 @@ void CSendDialog::OnKillFocusAmount(wxFocusEvent& event)
     if (m_textCtrlAmount->GetValue().Trim().empty())
         return;
     int64 nTmp;
-    if (ParseMoney(m_textCtrlAmount->GetValue(), nTmp))
+    if (ParseMoney(m_textCtrlAmount->GetValue().ToStdString().c_str(), nTmp))
         m_textCtrlAmount->SetValue(FormatMoney(nTmp));
 }
 
@@ -1341,7 +1366,7 @@ void CSendDialog::OnButtonSend(wxCommandEvent& event)
 
     // Parse amount
     int64 nValue = 0;
-    if (!ParseMoney(m_textCtrlAmount->GetValue(), nValue) || nValue <= 0)
+    if (!ParseMoney(m_textCtrlAmount->GetValue().ToStdString().c_str(), nValue) || nValue <= 0)
     {
         wxMessageBox("Error in amount ");
         return;
@@ -1528,8 +1553,9 @@ void CSendingDialog::OnPaint(wxPaintEvent& event)
 void CSendingDialog::Repaint()
 {
     Refresh();
-    wxPaintEvent event;
-    AddPendingEvent(event);
+    //wxPaintEvent event;
+    //AddPendingEvent(event);
+    pframeMain->Refresh();
 }
 
 bool CSendingDialog::Status()
@@ -1603,6 +1629,7 @@ void SendingDialogOnReply2(void* parg, CDataStream& vRecv)
 
 void CSendingDialog::OnReply2(CDataStream& vRecv)
 {
+    printf("Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
     if (!Status("Received public key..."))
         return;
 
@@ -1696,6 +1723,7 @@ void CSendingDialog::OnReply2(CDataStream& vRecv)
 
         Status("Waiting for confirmation...");
         MainFrameRepaint();
+        printf("Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
     }
 }
 
@@ -2910,7 +2938,7 @@ bool CMyApp::OnInit2()
         loop
         {
             // Show the previous instance and exit
-            HWND hwndPrev = FindWindow("wxWindowClassNR", "Bitcoin");
+            HWND hwndPrev = FindWindow(L"wxWindowClassNR", L"Bitcoin");
             if (hwndPrev)
             {
                 if (IsIconic(hwndPrev))
@@ -3030,11 +3058,16 @@ bool CMyApp::OnInit2()
     // Create the main frame window
     //
     {
+        printf("Start create CMainFrame ...\n");
         pframeMain = new CMainFrame(NULL);
+        printf("CMainFrame create done.\n");
         pframeMain->Show();
+        printf("CMainFrame show done.\n");
 
         if (!StartNode(strErrors))
             wxMessageBox(strErrors);
+
+        printf("StartNode() run done. Code at %s:%d \n",__FILE__, __LINE__);
 
         if (fGenerateBitcoins)
             if (_beginthread(ThreadBitcoinMiner, 0, NULL) == -1)
@@ -3043,11 +3076,11 @@ bool CMyApp::OnInit2()
         //
         // Tests
         //
-        if (argc >= 2 && stricmp(argv[1], "/send") == 0)
+        if (argc >= 2 && _stricmp(argv[1].ToStdString().c_str(), "/send") == 0)
         {
             int64 nValue = 1;
             if (argc >= 3)
-                ParseMoney(argv[2], nValue);
+                ParseMoney(argv[2].ToStdString().c_str(), nValue);
 
             string strAddress;
             if (argc >= 4)
@@ -3074,7 +3107,8 @@ bool CMyApp::OnInit2()
             fDebug = true;
         }
     }
-
+    printf("OnInit done. Code at %s:%d \n",__FILE__, __LINE__);
+    printf("Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
     return true;
 }
 
@@ -3142,10 +3176,12 @@ void MainFrameRepaint()
 {
     if (pframeMain)
     {
-        printf("MainFrameRepaint()\n");
-        wxPaintEvent event;
+        //printf("Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
+        //printf("MainFrameRepaint()\n");
+       // wxPaintEvent event;
         pframeMain->Refresh();
-        pframeMain->AddPendingEvent(event);
+        //pframeMain->AddPendingEvent(event);
+        //printf("Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
     }
 }
 

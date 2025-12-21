@@ -4,6 +4,14 @@
 
 #include "headers.h"
 
+//用于开发阶段支持内存监测功能
+#include <wx/process.h>
+#ifdef _WIN32
+#include <psapi.h>  // Windows 平台依赖
+#else
+#include <sys/resource.h>  // Linux/macOS 依赖
+#include <unistd.h>
+#endif
 
 
 bool fDebug = false;
@@ -71,7 +79,7 @@ void RandAddSeed(bool fPerfmon)
         unsigned char pdata[250000];
         memset(pdata, 0, sizeof(pdata));
         unsigned long nSize = sizeof(pdata);
-        long ret = RegQueryValueEx(HKEY_PERFORMANCE_DATA, "Global", NULL, NULL, pdata, &nSize);
+        long ret = RegQueryValueEx(HKEY_PERFORMANCE_DATA, L"Global", NULL, NULL, pdata, &nSize);
         RegCloseKey(HKEY_PERFORMANCE_DATA);
         if (ret == ERROR_SUCCESS)
         {
@@ -176,7 +184,7 @@ void PrintException(std::exception* pex, const char* pszThread)
 {
     char pszModule[260];
     pszModule[0] = '\0';
-    GetModuleFileName(NULL, pszModule, sizeof(pszModule));
+    GetModuleFileNameA(NULL, pszModule, sizeof(pszModule));
     _strlwr(pszModule);
     char pszMessage[1000];
     if (pex)
@@ -195,15 +203,21 @@ void PrintException(std::exception* pex, const char* pszThread)
 
 void ParseString(const string& str, char c, vector<string>& v)
 {
-    unsigned int i1 = 0;
-    unsigned int i2;
+    size_t i1 = 0;
+    size_t i2;
+    //printf("ParseString start[%s]! Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",str.c_str(),GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
     do
     {
         i2 = str.find(c, i1);
+        //printf("ParseString find a word[%s]! Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",str.substr(i1, i2-i1).c_str(),GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
         v.push_back(str.substr(i1, i2-i1));
         i1 = i2+1;
+        //printf("ParseString i2=[%zu]! Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",i2,GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
+        //if(i2 == str.npos)
+        //    printf("ParseString i2=npos,loop will break! Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);//此行代码会被执行吗？
     }
-    while (i2 != str.npos);
+    while (i2 < str.size()-1);
+    //printf("ParseString done[%s]! Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",str.c_str(),GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
 }
 
 
@@ -275,7 +289,7 @@ bool ParseMoney(const char* pszIn, int64& nRet)
 bool FileExists(const char* psz)
 {
 #ifdef WIN32
-    return GetFileAttributes(psz) != -1;
+    return GetFileAttributesA(psz) != -1;
 #else
     return access(psz, 0) != -1;
 #endif
@@ -354,6 +368,14 @@ void AddTimeData(unsigned int ip, int64 nTime)
     if (!setKnown.insert(ip).second)
         return;
 
+    // Filter out obviously invalid time data
+    // If the offset is more than 1 year in either direction, ignore it
+    const int64 MAX_TIME_OFFSET = 365 * 24 * 60 * 60; // 1 year in seconds
+    if (nOffsetSample > MAX_TIME_OFFSET || nOffsetSample < -MAX_TIME_OFFSET) {
+        printf("Ignoring invalid time data from ip %08x, offset %+I64d (too large)\n", ip, nOffsetSample);
+        return;
+    }
+
     // Add data
     static vector<int64> vTimeOffsets;
     if (vTimeOffsets.empty())
@@ -376,4 +398,46 @@ void AddTimeData(unsigned int ip, int64 nTime)
             printf("%+I64d  ", n);
         printf("|  nTimeOffset = %+I64d  (%+I64d minutes)\n", nTimeOffset, nTimeOffset/60);
     }
+}
+
+
+
+const char* GetFileNameWithoutPath(const char* fullPath) {
+    if (!fullPath) return "";
+
+    // thread_local：每个线程拥有独立的 fileName 副本，无竞争
+    thread_local std::string fileName;
+    std::string path(fullPath);
+    size_t pos = path.find_last_of("/\\");
+
+    if (pos != std::string::npos) {
+        fileName = path.substr(pos + 1);
+        return fileName.c_str();
+    } else {
+        return fullPath;
+    }
+}
+
+// 通用函数：获取当前程序物理内存占用（单位：MB）,仅用于开发阶段支持内存监测功能
+double GetCurrentProcessMemoryMB() {
+    double memoryMB = 0.0;
+
+#ifdef _WIN32
+    // Windows 平台：通过 wxProcess 获取当前进程句柄，配合 PSAPI
+    HANDLE hProcess = ::GetCurrentProcess();
+    PROCESS_MEMORY_COUNTERS pmc;
+    if (::GetProcessMemoryInfo(hProcess, &pmc, sizeof(pmc))) {
+        // WorkingSetSize = 物理内存占用（字节），转换为 MB
+        memoryMB = static_cast<double>(pmc.WorkingSetSize) / 1024 / 1024;
+    }
+#else
+    // Linux/macOS 平台（逻辑完全一致，合并为一个分支）
+    struct rusage usage;
+    if (getrusage(RUSAGE_SELF, &usage) == 0) {
+        // 两者 ru_maxrss 单位都是 KB，统一转换为 MB
+        memoryMB = static_cast<double>(usage.ru_maxrss) / 1024;
+    }
+#endif
+
+    return memoryMB;
 }

@@ -15,7 +15,8 @@
 
 static CCriticalSection cs_db;
 static bool fDbEnvInit = false;
-DbEnv dbenv(0);
+//DbEnv dbenv(0);
+DbEnv dbenv(u_int32_t(0));
 static map<string, int> mapFileUseCount;
 
 class CDBInit
@@ -58,7 +59,8 @@ CDB::CDB(const char* pszFile, const char* pszMode, bool fTxn) : pdb(NULL)
         {
             string strAppDir = GetAppDir();
             string strLogDir = strAppDir + "\\database";
-            _mkdir(strLogDir.c_str());
+            //_mkdir(strLogDir.c_str());
+            mkdir(strLogDir.c_str());
             printf("dbenv.open strAppDir=%s\n", strAppDir.c_str());
 
             dbenv.set_lg_dir(strLogDir.c_str());
@@ -67,6 +69,11 @@ CDB::CDB(const char* pszFile, const char* pszMode, bool fTxn) : pdb(NULL)
             dbenv.set_lk_max_objects(10000);
             dbenv.set_errfile(fopen("db.log", "a")); /// debug
             ///dbenv.log_set_config(DB_LOG_AUTO_REMOVE, 1); /// causes corruption
+            // �������ã�Ϊȷ����ͬ�汾��������������ʹ��ͬһ�������ļ������а汾��������ִ�У�
+            dbenv.set_cachesize(0, 1024*1024, 1); // �����Сͳһ������߰汾Ĭ�ϸ��󻺴浼�³�ͻ��
+            //dbenv.set_flags(DB_STRICT, 0);        // �����ϸ�ģʽ��6.x ������
+            dbenv.set_flags(DB_AUTO_COMMIT, 1);   // ͳһ�����Զ��ύ������ 4.x��
+            dbenv.set_flags(DB_TXN_NOSYNC, 1);    // �����ύ��ˢ�̣�����ֵ��
             ret = dbenv.open(strAppDir.c_str(),
                              DB_CREATE     |
                              DB_INIT_LOCK  |
@@ -79,6 +86,9 @@ CDB::CDB(const char* pszFile, const char* pszMode, bool fTxn) : pdb(NULL)
                              0);
             if (ret > 0)
                 throw runtime_error(strprintf("CDB() : error %d opening database environment\n", ret));
+
+            printf("CDB() : Berkeley DB config completed. ret:%d \n", ret);
+
             fDbEnvInit = true;
         }
 
@@ -87,6 +97,25 @@ CDB::CDB(const char* pszFile, const char* pszMode, bool fTxn) : pdb(NULL)
     }
 
     pdb = new Db(&dbenv, 0);
+	// �ؼ����������ݿ��ļ���ʽΪ 4.8 �汾��DB_OLD_FORMAT �ȼ��� 4.8 ��ʽ��
+    //u_int32_t fmt = DB_OLD_FORMAT; // ��ֱ��ָ���汾�ţ��� 0x04080000��4.8 �汾�ĸ�ʽ��ʶ��
+    //ret = pdb->fcntl(DB_FCNTL_SET_FMT, &fmt);
+	//ret = db_fcntl(pdb->get_DB(), DB_FCNTL_SET_FMT, &fmt);
+    //if (ret != 0)
+    //    throw runtime_error(strprintf("CDB() : error %d set DB format failed.\n", ret));
+
+    //u_int32_t page_size = 4096;  // ����ҳ��С��Ϊ 4KB������ BDB �汾��֧�֣�
+    //ret = pdb->fcntl(DB_FCNTL_SET_PGSIZE, &page_size); // ����ֵ��������
+	////ret = db_fcntl(pdb->get_DB(), DB_FCNTL_SET_PGSIZE_VAL, &page_size);
+    //if (ret != 0)
+    //{
+	//	delete pdb;
+	//	pdb = NULL;
+	//	CRITICAL_BLOCK(cs_db)
+	//		--mapFileUseCount[strFile];
+	//	strFile = "";
+	//	throw runtime_error(strprintf("CDB() : error %d set page_size failed.\n",  ret));
+    //}
 
     ret = pdb->open(NULL,      // Txn pointer
                     pszFile,   // Filename
@@ -104,6 +133,7 @@ CDB::CDB(const char* pszFile, const char* pszMode, bool fTxn) : pdb(NULL)
         strFile = "";
         throw runtime_error(strprintf("CDB() : can't open database file %s, error %d\n", pszFile, ret));
     }
+
 
     if (fCreate && !Exists(string("version")))
         WriteVersion(VERSION);
@@ -362,6 +392,15 @@ bool CTxDB::LoadBlockIndex()
             pindexNew->nBits          = diskindex.nBits;
             pindexNew->nNonce         = diskindex.nNonce;
 
+            //printf("Block info:[nHeight:%d,hash:%s,nTime:%u,nVersion:%d,hashMerkleRoot:%s,nBits:%u]\n"
+            //       ,pindexNew->nHeight
+            //       ,diskindex.GetBlockHash().ToString().substr(0,14).c_str()
+            //       ,pindexNew->nTime
+            //       ,pindexNew->nVersion
+            //       ,pindexNew->hashMerkleRoot.ToString().substr(0,14).c_str()
+            //       ,pindexNew->nBits);
+
+
             // Watch for genesis block and best block
             if (pindexGenesisBlock == NULL && diskindex.GetBlockHash() == hashGenesisBlock)
                 pindexGenesisBlock = pindexNew;
@@ -414,9 +453,16 @@ bool CAddrDB::LoadAddresses()
                 char psz[1000];
                 while (fgets(psz, sizeof(psz), filein))
                 {
+                    printf("Read line text:%s\n",psz);
                     CAddress addr(psz, NODE_NETWORK);
                     if (addr.ip != 0)
+                    {
+                        printf("AddAddress:%s.\n",addr.ToString().c_str() );
                         AddAddress(*this, addr);
+                    }
+                    else
+                        printf("Paser address failed:%.\n",psz );
+
                 }
             }
             catch (...) { }
@@ -441,19 +487,29 @@ bool CAddrDB::LoadAddresses()
             // Unserialize
             string strType;
             ssKey >> strType;
+            //printf("strType:%s\n",strType.c_str());
             if (strType == "addr")
             {
                 CAddress addr;
                 ssValue >> addr;
+                //printf("Read addr:%s\n",addr.ToString().c_str());
                 mapAddresses.insert(make_pair(addr.GetKey(), addr));
             }
         }
 
         //// debug print
-        printf("mapAddresses:\n");
-        foreach(const PAIRTYPE(vector<unsigned char>, CAddress)& item, mapAddresses)
-            item.second.print();
-        printf("-----\n");
+        //printf("mapAddresses:\n");
+        //foreach(const PAIRTYPE(vector<unsigned char>, CAddress)& item, mapAddresses)
+        //    item.second.print();
+        //printf("-----\n");
+		
+		printf("Loaded %d addresses\n", mapAddresses.size());
+		for (const auto& [key, value] : mapAddresses) 
+		{
+			std::string key_str;
+			for (const auto& i : key) key_str += strprintf("%u.",i);
+			printf("[%s = %s]\n",key_str.c_str(),value.ToString().c_str());
+		}
 
         // Fix for possible GCC bug that manifests in mapAddresses.count in irc.cpp,
         // just need to call count here and it doesn't happen there, do not delete this!

@@ -14,3 +14,7 @@
 
 # Run log files
 *.log
+
+# PreCompiled headers files
+*.h.gch
+

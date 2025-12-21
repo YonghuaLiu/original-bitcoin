@@ -2,6 +2,7 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file license.txt or http://www.opensource.org/licenses/mit-license.php.
 
+
 class CMessageHeader;
 class CAddress;
 class CInv;
@@ -41,7 +42,6 @@ void CheckForShutdown(int n);
 
 
 
-
 //
 // Message header
 //  (4) message start
@@ -51,7 +51,7 @@ void CheckForShutdown(int n);
 // The message start string is designed to be unlikely to occur in normal data.
 // The characters are rarely used upper ascii, not valid as UTF-8, and produce
 // a large 4-byte int at any alignment.
-static const char pchMessageStart[4] = { 0xf9, 0xbe, 0xb4, 0xd9 };
+static const unsigned char pchMessageStart[4] = { 0xf9, 0xbe, 0xb4, 0xd9 };
 
 class CMessageHeader
 {
@@ -259,6 +259,10 @@ public:
     {
         return (memcmp(pchReserved, pchIPv4, sizeof(pchIPv4)) == 0);
     }
+	
+	bool IsLocalHostIPv4() const;
+	
+	bool IsLocalListenAddr() const;
 
     bool IsRoutable() const
     {
@@ -272,7 +276,13 @@ public:
 
     string ToStringIPPort() const
     {
-        return strprintf("%u.%u.%u.%u:%u", GetByte(3), GetByte(2), GetByte(1), GetByte(0), ntohs(port));
+        //return strprintf("%u.%u.%u.%u:%u", GetByte(3), GetByte(2), GetByte(1), GetByte(0), ntohs(port));
+        //return strprintf("%hhu.%hhu.%hhu.%hhu:%hhu", GetByte(3), GetByte(2), GetByte(1), GetByte(0), ntohs(port));
+        //return strprintf("%hhu.%hhu.%hhu.%hhu:%u", GetByte(3), GetByte(2), GetByte(1), GetByte(0), ntohs(port));
+        return strprintf("%hhu.%hhu.%hhu.%hhu:%hu", GetByte(3), GetByte(2), GetByte(1), GetByte(0), ntohs(port));
+        //return strprintf("%hhu.%hhu.%hhu.%hhu", GetByte(3), GetByte(2), GetByte(1), GetByte(0));
+        //return strprintf("%u.%u.%u.%u", (unsigned int)GetByte(3), (unsigned int)GetByte(2), (unsigned int)GetByte(1), (unsigned int)GetByte(0));
+
     }
 
     string ToStringIP() const
@@ -282,7 +292,7 @@ public:
 
     string ToString() const
     {
-        return strprintf("%u.%u.%u.%u:%u", GetByte(3), GetByte(2), GetByte(1), GetByte(0), ntohs(port));
+        return strprintf("%u.%u.%u.%u:%u[%u]", GetByte(3), GetByte(2), GetByte(1), GetByte(0), ntohs(port),nServices);
         //return strprintf("%u.%u.%u.%u", GetByte(3), GetByte(2), GetByte(1), GetByte(0));
     }
 
@@ -416,7 +426,9 @@ extern uint64 nLocalServices;
 extern CAddress addrLocalHost;
 extern CNode* pnodeLocalHost;
 extern bool fShutdown;
-extern array<bool, 10> vfThreadRunning;
+extern uint64 nLocalHostNonce;
+//extern set<unsigned int> setLocalHostIPv4;
+extern std::array<bool, 10> vfThreadRunning;
 extern vector<CNode*> vNodes;
 extern CCriticalSection cs_vNodes;
 extern map<vector<unsigned char>, CAddress> mapAddresses;
@@ -447,6 +459,7 @@ public:
     bool fClient;
     bool fInbound;
     bool fNetworkNode;
+	bool fSuccessfullyConnected;
     bool fDisconnect;
 protected:
     int nRefCount;
@@ -454,6 +467,7 @@ public:
     int64 nReleaseTime;
     map<uint256, CRequestTracker> mapRequests;
     CCriticalSection cs_mapRequests;
+	int nStartingHeight;
 
     // flood
     vector<CAddress> vAddrToSend;
@@ -485,6 +499,7 @@ public:
         fDisconnect = false;
         nRefCount = 0;
         nReleaseTime = 0;
+		nStartingHeight = -1;
         vfSubscribe.assign(256, false);
 
         // Push a version message
@@ -599,9 +614,9 @@ public:
         unsigned int nSize = vSend.size() - nPushPos - sizeof(CMessageHeader);
         memcpy((char*)&vSend[nPushPos] + offsetof(CMessageHeader, nMessageSize), &nSize, sizeof(nSize));
 
-        printf("(%d bytes)  ", nSize);
-        //for (int i = nPushPos+sizeof(CMessageHeader); i < min(vSend.size(), nPushPos+sizeof(CMessageHeader)+20U); i++)
-        //    printf("%02x ", vSend[i] & 0xff);
+        printf("(%d bytes to %s)  ", nSize,addr.ToString().c_str());
+        for (int i = nPushPos+sizeof(CMessageHeader); i < min(vSend.size(), nPushPos+sizeof(CMessageHeader)+20U); i++)
+            printf("%02x ", vSend[i] & 0xff);
         printf("\n");
 
         nPushPos = -1;

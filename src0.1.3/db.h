@@ -3,6 +3,15 @@
 // file license.txt or http://www.opensource.org/licenses/mit-license.php.
 
 #include <db_cxx.h>
+// ------------- 关键：用数值常量替代缺失的宏 -------------
+//#define DB_FCNTL_SET_FMT_VAL  0x00000019  // 对应 DB_FCNTL_SET_FMT
+//#define DB_OLD_FORMAT_VAL  0x04080000  // 替代 DB_OLD_FORMAT（4.8 兼容格式）
+//#define DB_STRICT_VAL      0x00000001  // 替代 DB_STRICT（严格模式）
+//#define DB_60_FORMAT_VAL   0x06000000  // 替代 DB_60_FORMAT（6.x 专有格式）
+//#define DB_TXN_WRITE_NOSYNC_VAL 0x00000002  // 替代 DB_TXN_WRITE_NOSYNC
+//#define DB_TXN_NOSYNC_VAL    0x00000002  // 事务提交不刷盘（等价 DB_TXN_WRITE_NOSYNC）
+//#define DB_FCNTL_SET_PGSIZE_VAL 0x00000017  // 设置数据页大小
+
 class CTransaction;
 class CTxIndex;
 class CDiskBlockIndex;

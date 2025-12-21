@@ -578,17 +578,17 @@ bool EvalScript(const CScript& script, const CTransaction& txTo, unsigned int nI
                     break;
 
                 case OP_MUL:
-                    if (!BN_mul(&bn, &bn1, &bn2, pctx))
+                    if (!BN_mul(bn.pbn, bn1.pbn, bn2.pbn, pctx))
                         return false;
                     break;
 
                 case OP_DIV:
-                    if (!BN_div(&bn, NULL, &bn1, &bn2, pctx))
+                    if (!BN_div(bn.pbn, NULL, bn1.pbn, bn2.pbn, pctx))
                         return false;
                     break;
 
                 case OP_MOD:
-                    if (!BN_mod(&bn, &bn1, &bn2, pctx))
+                    if (!BN_mod(bn.pbn, bn1.pbn, bn2.pbn, pctx))
                         return false;
                     break;
 

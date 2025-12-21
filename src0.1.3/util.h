@@ -50,6 +50,9 @@ typedef unsigned long long  uint64;
 // This is needed because the foreach macro can't get over the comma in pair<t1, t2>
 #define PAIRTYPE(t1, t2)    pair<t1, t2>
 
+const char* GetFileNameWithoutPath(const char* fullPath) ;
+double GetCurrentProcessMemoryMB() ;
+
 // Used to bypass the rule against non-const reference to temporary
 // where it makes sense with wrappers such as CFlatData or CTxDB
 template<typename T>
@@ -238,6 +241,21 @@ inline int OutputDebugStringF(const char* pszFormat, ...)
     {
         va_list arg_ptr;
         va_start(arg_ptr, pszFormat);
+
+        /*
+        // 1. 获取系统时间（秒级精度，自 1970-01-01 起）
+        time_t nowTime = time(NULL);
+        // 2. 转换为本地时间（结构化日期时间）
+        // Windows 线程安全版本（替换 localtime）
+        struct tm localTm;
+        localtime_s(&localTm, &nowTime);  // 参数顺序：输出tm结构体指针 + 输入time_t指针
+
+        // 3. 格式化时间字符串（年月日 时分秒）
+        char timeStr[64];
+        // strftime：格式化时间，返回字符串长度（失败返回 0）
+        strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", &localTm);
+        vfprintf(fileout, "[%s]", timeStr);
+        */
         vfprintf(fileout, pszFormat, arg_ptr);
         va_end(arg_ptr);
         fclose(fileout);
@@ -271,7 +289,7 @@ inline int OutputDebugStringF(const char* pszFormat, ...)
             p2++;
             char c = *p2;
             *p2 = '\0';
-            OutputDebugString(p1);
+            OutputDebugStringA(p1);
             *p2 = c;
             p1 = p2;
         }
@@ -397,3 +415,4 @@ inline uint160 Hash160(const vector<unsigned char>& vch)
     RIPEMD160((unsigned char*)&hash1, sizeof(hash1), (unsigned char*)&hash2);
     return hash2;
 }
+
