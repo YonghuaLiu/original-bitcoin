@@ -372,22 +372,22 @@ CTxDetailsDialogBase::~CTxDetailsDialogBase()
     m_buttonOK->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(CTxDetailsDialogBase::OnButtonOK), NULL, this);
 }
 
-// uibase.cpp中实现
+// Implemented in uibase.cpp
 /*
 bool COptionsDialogBase::OnInitDialog()
 {
 
     if (!wxDialog::OnInitDialog())
-        return false;  // 父类初始化失败，直接退出
+        return false;  // Parent class initialization failed, exit directly
 
-    // 所有布局和控件创建、添加操作移到这里
+    // All layout and control creation/addition operations moved here
     wxBoxSizer* bSizer55 = new wxBoxSizer(wxVERTICAL);
     wxBoxSizer* bSizer57 = new wxBoxSizer(wxVERTICAL);
     bSizer57->Add(0, 20, 0, wxEXPAND, 5);
     m_staticTextFeeDesc = new wxStaticText(this, wxID_ANY, wxT("Optional transaction fee..."), wxDefaultPosition, wxDefaultSize, 0);
     m_staticTextFeeDesc->Wrap(-1);
     bSizer57->Add(m_staticTextFeeDesc, 0, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5);
-    // 后续其他控件（m_staticText31、m_textCtrlTransactionFee等）的创建和布局添加...
+    // Creation and layout addition of other subsequent controls (m_staticText31, m_textCtrlTransactionFee, etc.)...
 	
     bSizer57->Add(m_staticTextFeeDesc, 0, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5);
 
@@ -714,12 +714,12 @@ CSendDialogBase::CSendDialogBase(wxWindow* parent, wxWindowID id, const wxString
 	
     this->SetSizer(bSizer21);
     this->Layout();
-	// 关键代码：自动适配子控件的最佳尺寸（推荐优先使用）
-	this->Fit();  // 窗口大小 = 所有子控件按布局规则排列后的总尺寸
+	// Key code: Automatically adapt to the best size of child controls (recommended for priority use)
+	this->Fit();  // Window size = total size of all child controls arranged according to layout rules
 	
-	// 可选：如果希望窗口在 Fit 后的基础上再放大一定比例（如1.5倍）
-	//wxSize bestSize = this->GetBestSize();  // 获取 Fit 后的最佳尺寸
-	//this->SetSize(bestSize.Scale(1.5, 1.5));  // 宽高都放大1.5倍
+	// Optional: If you want the window to be enlarged by a certain ratio (e.g., 1.5 times) after Fit
+	//wxSize bestSize = this->GetBestSize();  // Get the best size after Fit
+	//this->SetSize(bestSize.Scale(1.5, 1.5));  // Enlarge both width and height by 1.5 times
 
     // Connect Events
     m_textCtrlAddress->Connect(wxEVT_KEY_DOWN, wxKeyEventHandler(CSendDialogBase::OnKeyDown), NULL, this);

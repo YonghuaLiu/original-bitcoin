@@ -57,7 +57,7 @@ static bool Send(SOCKET hSocket, const char* pszSend)
             return false;
         psz += ret;
     }
-	// 新增：需要时追加发送消息尾巴 \r\n
+	// New: Append message tail \r\n when needed \r\n
     if (strlen(pszSend) >= 2 && memcmp(pszSend + strlen(pszSend) - 2, "\r\n", 2) != 0)
     {
         int ret = send(hSocket, "\r\n", 2, 0);
@@ -177,7 +177,7 @@ void ThreadIRCSeed(void* parg)
     SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_NORMAL);
     int nErrorWait = 30;
     int nRetryWait = 10;
-    printf("IRCSeed nRetryWait=%d. Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",nRetryWait,GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
+    //printf("IRCSeed nRetryWait=%d. Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",nRetryWait,GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
 
     while (!fShutdown)
     {
@@ -216,20 +216,20 @@ void ThreadIRCSeed(void* parg)
         if (!addrLocalHost.IsRoutable())
             strMyName = strprintf("x%u", GetRand(1000000000));
 
-        printf("On IRC my name is %s. Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",strMyName.c_str() ,GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
+        //printf("On IRC my name is %s. Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",strMyName.c_str() ,GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
 
         //Send(hSocket, strprintf("NICK %s\r", strMyName.c_str()).c_str());
 		Send(hSocket, strprintf("NICK %s\r\n", strMyName.c_str()).c_str());
-        printf("IRC Send done:%s . Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",strprintf("NICK %s\r", strMyName.c_str()).c_str() ,GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
+        //printf("IRC Send done:%s . Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",strprintf("NICK %s\r", strMyName.c_str()).c_str() ,GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
         if(!Wait(3))
 			return ;
 		//Send(hSocket, strprintf("USER %s 8 * : %s\r", strMyName.c_str(), strMyName.c_str()).c_str());
 		Send(hSocket, strprintf("USER %s 8 * : %s\r\n", strMyName.c_str(), strMyName.c_str()).c_str());
-        printf("IRC Send done:%s . Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",strprintf("USER %s 8 * : %s\r", strMyName.c_str(), strMyName.c_str()).c_str(),GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
+        //printf("IRC Send done:%s . Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",strprintf("USER %s 8 * : %s\r", strMyName.c_str(), strMyName.c_str()).c_str(),GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
 
         if (!RecvUntil(hSocket,":*.freenode.net NOTICE","PING :"," 004 "))
         {
-            printf("IRC RecvUntil failed.Wait %d seconds. Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",nErrorWait,GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
+            //printf("IRC RecvUntil failed.Wait %d seconds. Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",nErrorWait,GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
             closesocket(hSocket);
             if (Wait(nErrorWait += 60))
                 continue;
