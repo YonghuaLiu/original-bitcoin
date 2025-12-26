@@ -9,9 +9,9 @@ void ThreadMessageHandler2(void* parg);
 void ThreadSocketHandler2(void* parg);
 void ThreadOpenConnections2(void* parg);
 
-// 校验 socket 句柄是否有效
-// 参数：sock - 待校验的 SOCKET 句柄
-// 返回值：true = 有效，false = 无效
+// Check if the socket handle is valid
+// Parameter: sock - SOCKET handle to be checked
+// Return value: true = valid, false = invalid
 bool isValidSocket(SOCKET sock);
 
 
@@ -471,17 +471,17 @@ void CNode::Disconnect()
 
 bool isValidSocket(SOCKET sock)
 {
-    // 1. 基础范围校验（过滤明显非法的句柄）
-    // Windows 中 SOCKET 是 unsigned int 类型，INVALID_SOCKET 定义为 0xFFFFFFFF（无效句柄）
-    // 正常 socket 句柄通常是 1~65535（默认最大句柄数，可通过 WSADATA.wMaxSockets 获取）
+    // 1. Basic range check (filter obviously invalid handles)
+    // In Windows, SOCKET is of type unsigned int, INVALID_SOCKET is defined as 0xFFFFFFFF (invalid handle)
+    // Normal socket handles are usually between 1~65535 (default maximum number of handles, can be obtained via WSADATA.wMaxSockets)
     if (sock == INVALID_SOCKET || sock == 0)
     {
         return false;
     }
 
-    // 2. 用 getsockopt 校验句柄是否为 Winsock 合法 socket（核心步骤）
-    // 原理：向 Winsock 内核查询 socket 的 SO_TYPE 选项（获取 socket 类型，如 SOCK_STREAM/SOCK_DGRAM）
-    // 若句柄无效，getsockopt 会返回 SOCKET_ERROR，且 WSAGetLastError() 返回 WSAENOTSOCK
+    // 2. Use getsockopt to check if the handle is a valid Winsock socket (core step)
+    // Principle: Query the SO_TYPE option of the socket from the Winsock kernel (get socket type, such as SOCK_STREAM/SOCK_DGRAM)
+    // If the handle is invalid, getsockopt will return SOCKET_ERROR and WSAGetLastError() will return WSAENOTSOCK
     int sockType = 0;
     int optLen = sizeof(sockType);
     int ret = getsockopt(
@@ -494,35 +494,35 @@ bool isValidSocket(SOCKET sock)
 
     if (ret == SOCKET_ERROR)
     {
-        // 获取错误码，进一步确认是否为「非 socket 句柄」
+        // Get the error code to further confirm if it is a "non-socket handle"
         int err = WSAGetLastError();
-        // WSAENOTSOCK = 句柄不是有效的 Winsock socket（最常见的无效场景）
+        // WSAENOTSOCK = The handle is not a valid Winsock socket (most common invalid scenario)
         if (err == WSAENOTSOCK)
         {
             return false;
         }
-        // 其他错误（如 WSAENETDOWN 网络中断、WSAEINPROGRESS 正在处理异步操作）：
-        // 此时句柄本身是有效的，只是暂时无法操作，返回 true
+        // Other errors (such as WSAENETDOWN network interruption, WSAEINPROGRESS processing asynchronous operation):
+        // At this time, the handle itself is valid, but temporarily unavailable, return true
     }
 
-    // 3. （可选）校验 socket 是否处于「已连接/可操作」状态（按需添加）
-    // 注意：此步骤会过滤掉「已创建但未连接」的 socket（如服务器监听 socket），需根据业务场景决定是否保留
+    // 3. (Optional) Check if the socket is in "connected/operable" state (add as needed)
+    // Note: This step will filter out "created but not connected" sockets (such as server listening sockets), need to decide whether to keep according to business scenarios
     /*
     struct sockaddr_in addr;
     int addrLen = sizeof(addr);
     if (getpeername(sock, (struct sockaddr*)&addr, &addrLen) == SOCKET_ERROR)
     {
         int err = WSAGetLastError();
-        // WSAENOTCONN = 未连接（如客户端未调用 connect，或服务器监听 socket 无连接）
+        // WSAENOTCONN = Not connected (such as client not calling connect, or server listening socket without connection)
         if (err == WSAENOTCONN)
         {
-            // 若业务需要监听「未连接的 socket」（如服务器监听 socket），则返回 true；否则返回 false
+            // If the business needs to monitor "unconnected sockets" (such as server listening sockets), return true; otherwise return false
             return false;
         }
     }
     */
 
-    // 所有校验通过，句柄有效
+    // All checks passed, handle is valid
     return true;
 }
 

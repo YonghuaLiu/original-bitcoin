@@ -219,8 +219,8 @@ void AddPendingCustomEvent(wxEvtHandler* pevthandler, int nEventID, const T pbeg
     wxCommandEvent event(nEventID);
     //wxString strData(wxChar(0), (pend - pbegin) / sizeof(wxChar) + 1);
     //memcpy(&strData[0], pbegin, pend - pbegin);
-    wxString strData;  // 简化初始化：无需提前分配，assign 会自动处理
-    strData.assign(reinterpret_cast<const wxChar*>(pbegin), (pend - pbegin) / sizeof(wxChar));  // 替换原 memcpy 行
+    wxString strData;  // Simplified initialization: no need to pre-allocate, assign will handle it automatically
+    strData.assign(reinterpret_cast<const wxChar*>(pbegin), (pend - pbegin) / sizeof(wxChar));  // Replace the original memcpy line
     event.SetString(strData);
     event.SetInt(pend - pbegin);
 
@@ -720,7 +720,7 @@ void CMainFrame::OnIdle(wxIdleEvent& event)
         }
 
         printf("RefreshListCtrl done\n");
-        printf("Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
+        //printf("Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
     }
     else
     {
@@ -1232,7 +1232,7 @@ void COptionsDialog::OnButtonOK(wxCommandEvent& event)
         CWalletDB().WriteSetting("nTransactionFee", nTransactionFee);
 
     //Close();
-	// 替换Close()为EndModal，确保模态对话框正确关闭
+	// Replace Close() with EndModal to ensure modal dialog closes correctly
     EndModal(wxID_OK);
 }
 
@@ -1262,12 +1262,12 @@ CAboutDialog::CAboutDialog(wxWindow* parent) : CAboutDialogBase(parent)
     if (str.Find(static_cast<wxChar>('Â')) != wxNOT_FOUND)
         str.Remove(str.Find(static_cast<wxChar>('Â'), 1));
     m_staticTextMain->SetLabel(str);
-	printf("Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n"
-		,GetCurrentProcessMemoryMB()
-		,GetFileNameWithoutPath(__FILE__)
-		,__LINE__
-		,__FUNCTION__
-	);
+	//printf("Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n"
+	//	,GetCurrentProcessMemoryMB()
+	//	,GetFileNameWithoutPath(__FILE__)
+	//	,__LINE__
+	//	,__FUNCTION__
+	//);
 }
 
 void CAboutDialog::OnButtonOK(wxCommandEvent& event)
@@ -3108,7 +3108,7 @@ bool CMyApp::OnInit2()
         }
     }
     printf("OnInit done. Code at %s:%d \n",__FILE__, __LINE__);
-    printf("Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
+    //printf("Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
     return true;
 }
 

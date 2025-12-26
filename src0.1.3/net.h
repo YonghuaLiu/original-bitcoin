@@ -615,8 +615,8 @@ public:
         memcpy((char*)&vSend[nPushPos] + offsetof(CMessageHeader, nMessageSize), &nSize, sizeof(nSize));
 
         printf("(%d bytes to %s)  ", nSize,addr.ToString().c_str());
-        for (int i = nPushPos+sizeof(CMessageHeader); i < min(vSend.size(), nPushPos+sizeof(CMessageHeader)+20U); i++)
-            printf("%02x ", vSend[i] & 0xff);
+        //for (int i = nPushPos+sizeof(CMessageHeader); i < min(vSend.size(), nPushPos+sizeof(CMessageHeader)+20U); i++)
+        //    printf("%02x ", vSend[i] & 0xff);
         printf("\n");
 
         nPushPos = -1;

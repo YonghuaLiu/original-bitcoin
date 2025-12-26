@@ -1677,7 +1677,7 @@ bool ProcessMessages(CNode* pfrom)
             Sleep(100);
             break;
         }
-		if (nMessageSize+4 <= vRecv.size() && !pfrom->fSuccessfullyConnected)
+		if (vRecv.GetVersion() < 209 && nMessageSize+4 <= vRecv.size() && !pfrom->fSuccessfullyConnected)
 		{
 			unsigned int hdr_nChecksum;
 			vRecv >> hdr_nChecksum;
@@ -1686,15 +1686,26 @@ bool ProcessMessages(CNode* pfrom)
             memcpy(&nChecksum, &hash, sizeof(nChecksum));
             if (nChecksum == hdr_nChecksum)
             {
-                printf("[High version node]vRecv.size()=(%d bytes) but nMessageSize=(%d bytes).From %s\n", vRecv.size()+4u,nMessageSize,pfrom->addr.ToStringIPPort().c_str() );
+                //printf("[High version node]vRecv.size()=(%d bytes) but nMessageSize=(%d bytes).From %s\n", vRecv.size()+4u,nMessageSize,pfrom->pAddr->ToStringIPPort().c_str() );
+				printf("[Unfriendly node,will skip it.]vRecv.size()=(%d bytes) but nMessageSize=(%d bytes).From %s\n", vRecv.size()+4u,nMessageSize,pfrom->addr.ToString().c_str() );
+				// Keep setting timestamps to 0 so they won't reconnect
+				map<vector<unsigned char>, CAddress>::iterator it = mapAddresses.find(pfrom->addr.GetKey());
+				if (it != mapAddresses.end())
+				{
+					(*it).second.nTime = 0;
+					CAddrDB().WriteAddress((*it).second);
+				}
+				
+				pfrom->fDisconnect = true;
+				return true;
             }
 			else if (vRecv.Rewind(sizeof(unsigned int)))
 			{
-				printf("[nMessageSize warning]vRecv.size()=(%d bytes) but nMessageSize=(%d bytes).From %s\n", vRecv.size(),nMessageSize,pfrom->addr.ToStringIPPort().c_str() );
+				printf("[nMessageSize warning]vRecv.size()=(%d bytes) but nMessageSize=(%d bytes).From %s\n", vRecv.size(),nMessageSize,pfrom->addr.ToString().c_str() );
 			}
 			else 
 			{
-				printf("[version/verack message invalid.]vRecv.size()=(%d bytes) but nMessageSize=(%d bytes).From %s\n", vRecv.size(),nMessageSize,pfrom->addr.ToStringIPPort().c_str() );
+				printf("[version/verack message invalid.]vRecv.size()=(%d bytes) but nMessageSize=(%d bytes).From %s\n", vRecv.size(),nMessageSize,pfrom->addr.ToString().c_str() );
 				continue;
 			}
 		}
@@ -1762,8 +1773,8 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
 {
     static map<unsigned int, vector<unsigned char> > mapReuseKey;
     printf("received: %-12s (%d bytes)  ", strCommand.c_str(), vRecv.size());
-    for (int i = 0; i < min(vRecv.size() , std::size_t(250)); i++)
-        printf("%02x ", vRecv[i] & 0xff);
+    //for (int i = 0; i < min(vRecv.size() , std::size_t(250)); i++)
+    //    printf("%02x ", vRecv[i] & 0xff);
     printf("\n");
     if (nDropMessagesTest > 0 && GetRand(nDropMessagesTest) == 0)
     {
@@ -1784,7 +1795,7 @@ bool ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
         CAddress addrFrom;
         uint64 nNonce = 1;
         string strSubVer;
-        const int ALLOW_MAX_VERSION = 70000;
+        const int ALLOW_MAX_VERSION = 99999;
         //vRecv >> pfrom->nVersion >> pfrom->nServices >> nTime >> addrMe;
 		vRecv >> pfrom->nVersion;
 		// Disconnect if we can not read version message or version is not available
@@ -2311,9 +2322,9 @@ bool BitcoinMiner()
         // Create coinbase tx
         //
 
-		// 1. 自定义要写入的文字（示例：挖矿节点标识 + 备注）
+		// 1. Customize the text to be written (example: mining node identifier + remarks)
 		std::string message = "Mining by Digital People Tribe.";
-		// 2. 将文字转换为字节流（UTF-8 编码，兼容多语言）
+		// 2. Convert text to byte stream (UTF-8 encoding, compatible with multiple languages)
 		std::vector<unsigned char> msgBytes(message.begin(), message.end());
         CTransaction txNew;
         txNew.vin.resize(1);
