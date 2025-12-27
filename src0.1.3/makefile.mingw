@@ -21,7 +21,7 @@ INCLUDEPATHS= \
  -I"/usr/local/bdb-4.7.25/include" \
  -I"/mingw64/include" \
  -I"/mingw64/include/wx-3.2" \
- -I"/mingw64/lib/wx/include/msw-unicode-3.2" 
+ -I"/mingw64/lib/wx/include/msw-unicode-static-3.2" 
  
 
 LIBPATHS= \
@@ -30,17 +30,20 @@ LIBPATHS= \
 
 WX_VERSION = 3.2
 WX_CONFIG = wx-config   
-WX_MODE = debug      
+WX_MODE = debug 
+WX_STATIC = yes     
 
-WXLIBS += $(shell $(WX_CONFIG) --libs --$(WX_MODE)) -lwx_mswu_richtext-3.2
+# Explicitly include all necessary wxWidgets components
+WXLIBS += $(shell $(WX_CONFIG) --libs core,base,adv,html,richtext,xml --$(WX_MODE) --static)
 
 
 LIBS= \
  -lboost_filesystem-mt \
- -l db_cxx \
+ -ldb_cxx \
  -lcrypto -lssl \
  -lpsapi \
- -l kernel32 -l user32 -l gdi32 -l comdlg32 -l winspool -l winmm -l shell32 -l comctl32 -l ole32 -l oleaut32 -l uuid -l rpcrt4 -l advapi32 -l ws2_32 -l shlwapi 
+ -l kernel32 -l user32 -l gdi32 -l comdlg32 -l winspool -l winmm -l shell32 -l comctl32 -l ole32 -l oleaut32 -l uuid -l rpcrt4 -l advapi32 -l ws2_32 -l shlwapi -l crypt32 
+# -static-libgcc -static-libstdc++
 
 WXDEFS=-DWIN32 -D__WXMSW__ -D_WINDOWS -DNOPCH
 CFLAGS=-mthreads -O0 -w -Wno-invalid-offsetof -Wformat $(DEBUGFLAGS) $(WXDEFS) $(INCLUDEPATHS)
@@ -95,11 +98,11 @@ OBJS=obj/util.o obj/script.o obj/db.o obj/net.o obj/main.o obj/market.o	 \
 
 bitcoin.exe: headers.h.gch $(OBJS)
 #	-kill /f bitcoin.exe
-	g++ $(CFLAGS) -mwindows -Wl,--subsystem,windows -o $@ $(LIBPATHS) $(OBJS) $(LIBS) $(WXLIBS)
+	g++ $(CFLAGS) -mwindows -Wl,--subsystem,windows -static -o $@ $(LIBPATHS) $(OBJS) $(WXLIBS) $(LIBS)
 	
 #bitcoin.exe: headers.h.gch $(OBJS)
 #	g++ $(CFLAGS) -mwindows -Wl,--subsystem,windows -o $@ $(LIBPATHS) $^ $(WXLIBS) $(LIBS)
 
 clean:
-	-del /Q obj\*
-	-del /Q headers.h.gch
+	-rm  obj/*
+	-rm  headers.h.gch
