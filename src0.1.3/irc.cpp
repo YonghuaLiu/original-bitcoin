@@ -227,7 +227,8 @@ void ThreadIRCSeed(void* parg)
 		Send(hSocket, strprintf("USER %s 8 * : %s\r\n", strMyName.c_str(), strMyName.c_str()).c_str());
         //printf("IRC Send done:%s . Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",strprintf("USER %s 8 * : %s\r", strMyName.c_str(), strMyName.c_str()).c_str(),GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
 
-        if (!RecvUntil(hSocket,":*.freenode.net NOTICE","PING :"," 004 "))
+        //if (!RecvUntil(hSocket,":*.freenode.net NOTICE","PING :"," 004 "))
+		if (!RecvUntil(hSocket," 001 "))
         {
             //printf("IRC RecvUntil failed.Wait %d seconds. Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n",nErrorWait,GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
             closesocket(hSocket);
@@ -239,12 +240,12 @@ void ThreadIRCSeed(void* parg)
 		
 		//printf("IRC PING/PONG OK! Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n", GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
 
-        Send(hSocket, "JOIN #bitcoin");
-        //printf("IRC Send done:%s . Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n", "JOIN #bitcoin\r",GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
+        Send(hSocket, "JOIN #DPT");
+        //printf("IRC Send done:%s . Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n", "JOIN #DPT\r",GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
         if(!Wait(3))
 			return ;
-		Send(hSocket, "WHO #bitcoin");
-        //printf("IRC Send done:%s . Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n", "WHO #bitcoin\r",GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
+		Send(hSocket, "WHO #DPT");
+        //printf("IRC Send done:%s . Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n", "WHO #DPT\r",GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
 		//if(!Wait(3))
 		//	return ;
 
