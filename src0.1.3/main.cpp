@@ -1643,7 +1643,8 @@ bool ProcessMessages(CNode* pfrom)
             if (vRecv.size() > sizeof(CMessageHeader))
 			{
                 printf("\n\nPROCESSMESSAGE MESSAGESTART NOT FOUND\n\n");
-                vRecv.erase(vRecv.begin(), vRecv.end() - sizeof(CMessageHeader));
+                //vRecv.erase(vRecv.begin(), vRecv.end() - sizeof(CMessageHeader));
+				vRecv.erase(vRecv.begin(), vRecv.end());
             }
             break;
         }
