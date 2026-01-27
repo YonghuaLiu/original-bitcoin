@@ -312,7 +312,19 @@ inline int OutputDebugStringF(const char* pszFormat, ...)
 }
 
 
+inline int64 GetTimeMillis()
+{
+    return wxGetLocalTimeMillis().GetValue();
+}
 
+inline string DateTimeStrFormat(const char* pszFormat, int64 nTime)
+{
+    time_t n = nTime;
+    struct tm* ptmTime = gmtime(&n);
+    char pszTime[200];
+    strftime(pszTime, sizeof(pszTime), pszFormat, ptmTime);
+    return pszTime;
+}
 
 
 
