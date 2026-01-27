@@ -84,8 +84,8 @@ bool RecvLine(SOCKET hSocket, string& strLine)
         }
         else if (nBytes <= 0)
         {
-            if (!strLine.empty())
-                return true;
+            //if (!strLine.empty())
+            //    return true;
             // socket closed
             printf("IRC socket closed\n");
             return false;
@@ -253,7 +253,7 @@ void ThreadIRCSeed(void* parg)
         while (!fShutdown && RecvLineIRC(hSocket, strLine))
         {
             //printf("IRC Recived a message:%s .\n Current Memory total():%.2lf MB\t\tCode at:%s:%d %s\n", strLine.c_str() ,GetCurrentProcessMemoryMB(),GetFileNameWithoutPath(__FILE__),__LINE__,__FUNCTION__);
-            if (strLine.empty() || strLine.size() > 900 || strLine[0] != ':')
+            if (strLine.empty() || strLine.size() > 900 || (strLine[0] != ':' && strLine.substr(0, 4) != "PING "))
                 continue;
             printf("IRC %s\n", strLine.c_str());
 

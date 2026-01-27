@@ -2428,7 +2428,8 @@ bool BitcoinMiner()
         //
         // Search
         //
-        unsigned int nStart = GetTime();
+        //unsigned int nStart = GetTime();
+		int64 nStart = GetTime();
         uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
         uint256 hash;
 		//printf("BitcoinMiner Search start[nNonce=1,nTime:%d,nBits:%d,hashTarget:%s][timestamp:%" PRId64"]\n",tmp.block.nTime,tmp.block.nBits,hashTarget.GetHex().c_str(),GetTime());
@@ -2467,41 +2468,70 @@ bool BitcoinMiner()
                 break;
             }
 
-            // Update nTime every few seconds
-            //if ((++tmp.block.nNonce & 0x3ffff) == 0)
-			//if ((++tmp.block.nNonce & 0xfffff) == 0)
-			if ((++tmp.block.nNonce & 0xffffff) == 0)
+            // Update nTime every few seconds 
+			//const unsigned int nMask = 0xffffff;
+			const unsigned int nMask = 0xffff;
+            if ((++tmp.block.nNonce & nMask) == 0)
             {
-                CheckForShutdown(3);
+                // Meter hashes/sec
+                static int64 nHashCounter;
+                static int64 nLastTick;
+                if (nLastTick == 0)
+                    nLastTick = GetTimeMillis();
+                else
+                    nHashCounter += nMask + 1;
+                if (GetTimeMillis() - nLastTick > 4000)
+                {
+                    double dHashesPerSec = 1000.0 * nHashCounter / (GetTimeMillis() - nLastTick);
+                    nLastTick = GetTimeMillis();
+                    nHashCounter = 0;
+                    string strStatus = strprintf("    %.0f khash/s", dHashesPerSec/1000.0);
+                    //UIThreadCall(bind(CalledSetStatusBar, strStatus, 0));
+                    static int64 nLogTime;
+                    if (GetTime() - nLogTime > 30 * 60)
+                    {
+                        nLogTime = GetTime();
+                        printf("%s ", DateTimeStrFormat("%x %H:%M", GetTime()).c_str());
+                        //printf("hashmeter %3d CPUs %6.0f khash/s\n", vnThreadsRunning[3], dHashesPerSec/1000.0);
+						printf("hashmeter  %6.0f khash/s\n", dHashesPerSec/1000.0);
+                    }
+                }
+
+                // Check for stop or if block needs to be rebuilt
+                if (fShutdown)
+                    return true;
+                if (!fGenerateBitcoins)
+                    return true;
+                //if (fLimitProcessors && vnThreadsRunning[3] > nLimitProcessors)
+                //    return true;
+                if (vNodes.empty())
+                    break;
                 if (tmp.block.nNonce == 0)
-				{
-					printf("BitcoinMiner Search end[nNonce=0][timestamp:%" PRId64"]\n",GetTime());
-					break;
-				}
-                if (pindexPrev != pindexBest)
                     break;
                 if (nTransactionsUpdated != nTransactionsUpdatedLast && GetTime() - nStart > 60)
                     break;
-                if (!fGenerateBitcoins)
+                if (pindexPrev != pindexBest)
+                {
+                    // Pause generating during initial download
+                    if (GetTime() - nStart < 20)
+                    {
+                        CBlockIndex* pindexTmp;
+                        do
+                        {
+                            pindexTmp = pindexBest;
+                            for (int i = 0; i < 10; i++)
+                            {
+                                Sleep(1000);
+                                if (fShutdown)
+                                    return true;
+                            }
+                        }
+                        while (pindexTmp != pindexBest);
+                    }
                     break;
-                //tmp.block.nTime = pblock->nTime = max(pindexPrev->GetMedianTimePast()+1, GetAdjustedTime());
-				pblock->nTime = max(pindexPrev->GetMedianTimePast()+1, GetAdjustedTime());
-				if (tmp.block.nTime != pblock->nTime)
-				{
-					//printf("BitcoinMiner Search nNonce nTime change from %" PRId64" to %" PRId64"\n",tmp.block.nTime,pblock->nTime);
-					tmp.block.nTime = pblock->nTime;
-					tmp.block.nNonce--;
-				}
-				//[nHeight:%d,hash:%s,nTime:%u,nVersion:%d,hashMerkleRoot:%s,nBits:%u]
-				//printf("BitcoinMiner Search nNonce[hashPrevBlock:%s,hashMerkleRoot:%s,nNonce:%u,nTime:%u,nVersion:%d,nBits:%u][timestamp:%" PRId64"]\n"
-				//	,tmp.block.hashPrevBlock.GetHex().c_str()
-				//	,tmp.block.hashMerkleRoot.GetHex().c_str()
-				//	,tmp.block.nNonce
-				//	,tmp.block.nTime
-				//	,tmp.block.nVersion
-				//	,tmp.block.nBits
-				//	,GetTime()
-				//);
+                }
+
+                tmp.block.nTime = pblock->nTime = max(pindexPrev->GetMedianTimePast()+1, GetAdjustedTime());
             }
         }
     }
