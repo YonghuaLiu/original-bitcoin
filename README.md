@@ -16,9 +16,9 @@ You can also custom-develop any personalized Bitcoin node software that is
 compatible with Satoshi Nakamoto's original Bitcoin software to join the 
 Bitcoin Revived Chain; there are no other mandatory requirements except for 
 the necessity to maintain compatibility with Satoshi Nakamoto's original 
-Bitcoin(V0.1.0~0.2.9) software. For an in-depth understanding of this system, 
+Bitcoin(V0.1.0 to V0.2.9) software. For an in-depth understanding of this system, 
 it is recommended that you read the document bitcoin_revived.pdf in detail.
 <br>你可以在windows上直接运行可执行程序bitcoin.exe加入比特币重生链进行区块验证、交易转发和挖矿等操作
 支持该系统运行。你也可以定制开发出任何与中本聪原始版比特币软件兼容个性化比特币节点软件加入比特币重生
-链，除了必须保持与中本聪原始版比特币软件(V0.1.0~0.2.9)兼容外没有其他任何强制性要求。为了深入的了解
+链，除了必须保持与中本聪原始版比特币软件(V0.1.0至V0.2.9)兼容外没有其他任何强制性要求。为了深入的了解
 这个系统，建议您详细阅读文档bitcoin_revived.pdf。
