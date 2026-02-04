@@ -34,6 +34,4 @@ jobs:
       # 4. 强制推送代码到 Gitee（覆盖同名分支）
       - name: Push to Gitee
         run: |
-          git push -f gitee original:original
-          git push -f gitee revived/v0.1.3:revived/v0.1.3
-          git push -f gitee revived/main:revived/main
+          git push -f gitee
