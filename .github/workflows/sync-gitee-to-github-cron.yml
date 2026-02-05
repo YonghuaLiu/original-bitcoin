@@ -12,17 +12,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Gitee Repo (Latest Code)
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # 拉取Gitee所有分支/提交历史，必选
-          # 直接拉取Gitee的bitcoin仓库（用Secrets凭证免密）
-          repository: ${{ secrets.GITEE_USERNAME }}/original-bitcoin
-          token: ${{ secrets.GITEE_TOKEN }}  # 复用已配置的Gitee令牌
+        run: |
+          # 配置Git用户信息（Gitee提交/拉取代码需要）
+          git config --global user.name "${{ secrets.GITEE_USERNAME }}"
+          git config --global user.email "liu.yonghua@163.com"  # 替换为你的Gitee绑定邮箱
+          
+          # 克隆Gitee仓库（使用Token免密认证）
+          git clone --depth=0 https://${{ secrets.GITEE_USERNAME }}:${{ secrets.GITEE_TOKEN }}@gitee.com/${{ secrets.GITEE_USERNAME }}/original-bitcoin.git .
+          
+          # 拉取所有分支和提交历史（等效于fetch-depth: 0）
+          git fetch --all
+        env:
+          # 避免Git操作时的交互提示
+          GIT_TERMINAL_PROMPT: 0
 
       - name: Configure Git Identity
         run: |
           git config --global user.name "Gitee Sync Bot"
-          git config --global user.email "gitee-sync-bot@example.com"
+          git config --global user.email "liu.yonghua@163.com"
 
       - name: Add GitHub Remote
         run: |
