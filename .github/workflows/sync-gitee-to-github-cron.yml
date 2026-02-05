@@ -18,7 +18,7 @@ jobs:
           git config --global user.email "liu.yonghua@163.com"  # 替换为你的Gitee绑定邮箱
           
           # 克隆Gitee仓库（使用Token免密认证）
-          git clone --depth=0 https://${{ secrets.GITEE_USERNAME }}:${{ secrets.GITEE_TOKEN }}@gitee.com/${{ secrets.GITEE_USERNAME }}/original-bitcoin.git .
+          git clone https://${{ secrets.GITEE_USERNAME }}:${{ secrets.GITEE_TOKEN }}@gitee.com/${{ secrets.GITEE_USERNAME }}/original-bitcoin.git .
           
           # 拉取所有分支和提交历史（等效于fetch-depth: 0）
           git fetch --all
