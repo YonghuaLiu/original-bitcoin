@@ -1,0 +1,39 @@
+# .github/workflows/sync-gitee-to-github-cron.yml
+name: Sync Gitee to GitHub (Cron)
+# 定时触发：*/10 * * * * 表示每分钟同步一次（可自定义，见下方说明）
+# 同时保留手动触发：可在GitHub Actions页面手动点击「Run workflow」立即同步
+on:
+  schedule:
+    - cron: '*/10 * * * *'  # 同步频率，按需修改
+  workflow_dispatch:  # 手动触发，紧急同步时用
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Gitee Repo (Latest Code)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 拉取Gitee所有分支/提交历史，必选
+          # 直接拉取Gitee的bitcoin仓库（用Secrets凭证免密）
+          repository: ${{ secrets.GITEE_USERNAME }}/original-bitcoin
+          token: ${{ secrets.GITEE_TOKEN }}  # 复用已配置的Gitee令牌
+
+      - name: Configure Git Identity
+        run: |
+          git config --global user.name "Gitee Sync Bot"
+          git config --global user.email "gitee-sync-bot@example.com"
+
+      - name: Add GitHub Remote
+        run: |
+          # 用GitHub的PAT令牌免密推送到GitHub仓库
+          git remote add github https://${{ secrets.PAT_FOR_GITHUB }}@github.com/${{ github.repository }}.git
+
+      - name: Push All Branches/Tags to GitHub
+        run: |
+          echo "Start sync Gitee → GitHub (all branches + tags)"
+          # 推送所有分支到GitHub（覆盖同名分支，保证一致）
+          git push -f github --all
+          # 推送所有标签到GitHub（可选，若仓库用标签管理版本，保留此句）
+          git push -f github --tags
+          echo "Sync Gitee → GitHub completed!"
